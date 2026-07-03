@@ -218,6 +218,8 @@ tbody tr.aging:hover{background:#f3d5d5}
           <option value="">Semua Jenis</option>
           <option>Wedding</option><option>Corporate</option><option>Others</option>
         </select>
+        <select id="qVia"><option value="">Semua Via</option></select>
+        <select id="qPic"><option value="">Semua PIC</option></select>
       </div>
       <div class="tablewrap">
         <table id="listTable">
@@ -232,6 +234,21 @@ tbody tr.aging:hover{background:#f3d5d5}
     <div class="view" id="viewCustomer">
       <div class="filterbar">
         <input id="cSearch" placeholder="🔍 Cari customer / kontak…" />
+        <select id="cStatus">
+          <option value="">Semua Status</option>
+          <option value="✅ Deal">✅ Deal</option>
+          <option value="📝 Quotation">📝 Quotation</option>
+          <option value="❌ Cancel">❌ Cancel</option>
+        </select>
+        <select id="cVia"><option value="">Semua Via</option></select>
+        <select id="cJenis"><option value="">Semua Jenis</option></select>
+        <select id="cPic"><option value="">Semua PIC</option></select>
+        <select id="cSort">
+          <option value="">Urutan asli</option>
+          <option value="deal">💰 Total Deal terbesar</option>
+          <option value="recent">🕒 Paling baru</option>
+          <option value="inquiry">📊 Inquiry terbanyak</option>
+        </select>
       </div>
       <div class="tablewrap">
         <table id="custTable">
@@ -384,22 +401,36 @@ function ageDays(ts){
   return Math.floor((Date.now() - d.getTime()) / 86400000);
 }
 
+/* ====== SHARED: isi dropdown dari nilai unik data ====== */
+function fillSelect(id, values, allLabel){
+  const el = $(id); if(!el) return;
+  const cur = el.value;
+  const uniq = [...new Set(values.map(v=>String(v||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  el.innerHTML = `<option value="">${allLabel}</option>` +
+    uniq.map(v=>`<option value="${esc(v)}"${v===cur?' selected':''}>${esc(v)}</option>`).join('');
+}
+function statusKey_(s){ s=s||''; return s.indexOf('Deal')>=0?'Deal':s.indexOf('Cancel')>=0?'Cancel':'Quotation'; }
+
 /* ====== INQUIRY LIST + FILTER ====== */
 let currentList = [];
-function renderList(list){ currentList = list || []; applyFilters(); }
+function renderList(list){
+  currentList = list || [];
+  fillSelect('qVia', currentList.map(x=>x.contactVia), 'Semua Via');
+  fillSelect('qPic', currentList.map(x=>x.salesPic),   'Semua PIC');
+  applyFilters();
+}
 
 function applyFilters(){
   const q  = $('qSearch').value.trim().toLowerCase();
   const st = $('qStatus').value;
   const jn = $('qJenis').value;
+  const via = $('qVia').value;
+  const pic = $('qPic').value;
   const rows = currentList.filter(x => {
-    if(st){
-      const key = st.indexOf('Deal')>=0?'Deal':st.indexOf('Cancel')>=0?'Cancel':'Quotation';
-      const sx = x.status||'';
-      const xKey = sx.indexOf('Deal')>=0?'Deal':sx.indexOf('Cancel')>=0?'Cancel':'Quotation';
-      if(xKey !== key) return false;
-    }
+    if(st && statusKey_(x.status) !== statusKey_(st)) return false;
     if(jn && (x.jenisInquiry||'') !== jn) return false;
+    if(via && (x.contactVia||'') !== via) return false;
+    if(pic && (x.salesPic||'') !== pic) return false;
     if(q){
       const hay = ((x.customer||'')+' '+(x.product||'')+' '+(x.referral||'')+' '+(x.salesPic||'')).toLowerCase();
       if(hay.indexOf(q)<0) return false;
@@ -434,6 +465,8 @@ function drawList(rows){
 $('qSearch').oninput = applyFilters;
 $('qStatus').onchange = applyFilters;
 $('qJenis').onchange = applyFilters;
+$('qVia').onchange = applyFilters;
+$('qPic').onchange = applyFilters;
 
 /* ====== TABS ====== */
 $('tabInquiry').onclick = ()=> switchTab('inquiry');
@@ -458,17 +491,32 @@ async function loadCustomers(){
     const data = await res.json();
     if(!data.success){ tb.innerHTML = '<tr><td colspan="11" class="muted-empty">'+esc(data.error||'Gagal memuat')+'</td></tr>'; return; }
     customers = data.customers || [];
+    fillSelect('cVia',   customers.map(c=>c.contactVia),   'Semua Via');
+    fillSelect('cJenis', customers.map(c=>c.jenisInquiry), 'Semua Jenis');
+    fillSelect('cPic',   customers.map(c=>c.salesPic),     'Semua PIC');
     drawCustomers();
   }catch(e){
     tb.innerHTML = '<tr><td colspan="11" class="muted-empty">Gagal terhubung ke server.</td></tr>';
   }
 }
 function drawCustomers(){
-  const q = $('cSearch').value.trim().toLowerCase();
+  const q   = $('cSearch').value.trim().toLowerCase();
+  const st  = $('cStatus').value, via = $('cVia').value, jn = $('cJenis').value, pic = $('cPic').value;
+  const sort= $('cSort').value;
   const tb = $('custTable').querySelector('tbody'); tb.innerHTML='';
-  const rows = customers.filter(c => !q || ((c.customer||'')+' '+(c.contact||'')).toLowerCase().indexOf(q)>=0);
+  const rows = customers.filter(c => {
+    if(q && (((c.customer||'')+' '+(c.contact||'')).toLowerCase().indexOf(q)<0)) return false;
+    if(st && statusKey_(c.lastStatus) !== statusKey_(st)) return false;
+    if(via && (c.contactVia||'') !== via) return false;
+    if(jn && (c.jenisInquiry||'') !== jn) return false;
+    if(pic && (c.salesPic||'') !== pic) return false;
+    return true;
+  });
+  if(sort==='deal')         rows.sort((a,b)=>(b.totalDeal||0)-(a.totalDeal||0));
+  else if(sort==='inquiry') rows.sort((a,b)=>(b.count||0)-(a.count||0));
+  else if(sort==='recent')  rows.sort((a,b)=>String(b.lastSeen||'').localeCompare(String(a.lastSeen||'')));
   if(!rows.length){
-    tb.innerHTML = '<tr><td colspan="11" class="muted-empty">Belum ada customer.</td></tr>'; return;
+    tb.innerHTML = '<tr><td colspan="11" class="muted-empty">Tidak ada customer yang cocok.</td></tr>'; return;
   }
   rows.forEach(c=>{
     const tr = document.createElement('tr');
@@ -480,6 +528,7 @@ function drawCustomers(){
   });
 }
 $('cSearch').oninput = drawCustomers;
+['cStatus','cVia','cJenis','cPic','cSort'].forEach(id=>{ $(id).onchange = drawCustomers; });
 
 /* ====== EDIT ====== */
 function openEdit(i){
