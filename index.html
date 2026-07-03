@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>NRN — Inquiry Form</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
 <style>
@@ -151,8 +152,13 @@ tbody tr.aging:hover{background:#f3d5d5}
       <div class="kpi wait"><h3>📝 Quotation</h3><div class="v num" id="sWait">0</div></div>
       <div class="kpi cancel"><h3>❌ Cancel</h3><div class="v num" id="sCancel">0</div></div>
       <div class="kpi conv"><h3>📈 Conversion</h3><div class="v num" id="sConv">0%</div></div>
+      <div class="kpi wait"><h3>💰 Nominal Quotation</h3><div class="v num" id="sNominalQuote">Rp 0</div></div>
       <div class="kpi nominal"><h3>💰 Nominal Deal</h3><div class="v num" id="sNominal">Rp 0</div></div>
     </div>
+
+    <!-- Perbandingan bulan ini vs bulan lalu -->
+    <div class="section-title">📆 Bulan Ini vs Bulan Lalu</div>
+    <div class="kpis" id="momBox"></div>
 
     <!-- Form -->
     <div class="section-title">➕ Input Inquiry Baru</div>
@@ -163,13 +169,11 @@ tbody tr.aging:hover{background:#f3d5d5}
       </div>
       <div class="row2">
         <div class="field"><label>Jenis Inquiry</label>
-          <select id="fJenis">
-            <option value="">— Pilih —</option>
-            <option>Wedding</option><option>Corporate</option><option>Others</option>
-          </select>
+          <select id="fJenis"><option value="">— Pilih —</option></select>
         </div>
-        <div class="field"><label>Tanggal Acara</label><input type="date" id="fTanggal" /></div>
+        <div class="field"><label>Deadline</label><input type="date" id="fTanggal" /></div>
       </div>
+      <div class="field"><label>Kategori Produk</label><input id="fKategori" list="katProdukList" placeholder="Bag / Apparel / Carry goods / Accessories / Gloves — bisa ketik manual" /></div>
       <div class="row2">
         <div class="field"><label>Est. Nominal (Rp)</label><input type="number" id="fNominal" placeholder="0" min="0" /></div>
         <div class="field"><label>Status</label>
@@ -180,6 +184,7 @@ tbody tr.aging:hover{background:#f3d5d5}
           </select>
         </div>
       </div>
+      <div class="field" id="fCancelWrap" style="display:none"><label>Alasan Cancel *</label><textarea id="fCancelReason" rows="2" style="width:100%;font-family:inherit;font-size:14px;padding:10px 12px;border:1.5px solid var(--cream2);border-radius:9px;background:var(--white);color:var(--text);outline:none;resize:vertical" placeholder="Kenapa inquiry ini cancel? (wajib untuk status Cancel)"></textarea></div>
       <div class="row2">
         <div class="field"><label>Contact Via</label>
           <select id="fContactVia">
@@ -220,10 +225,11 @@ tbody tr.aging:hover{background:#f3d5d5}
         </select>
         <select id="qVia"><option value="">Semua Via</option></select>
         <select id="qPic"><option value="">Semua PIC</option></select>
+        <button id="btnExcel" class="iconbtn" style="height:38px;white-space:nowrap">⬇ Excel</button>
       </div>
       <div class="tablewrap">
         <table id="listTable">
-          <thead><tr><th>Tanggal</th><th>Customer</th><th>Produk</th><th>Jenis</th><th>Tgl Acara</th><th>Referral</th><th>Est. Nominal</th><th>Via</th><th>Status</th><th>PIC</th><th>Aksi</th></tr></thead>
+          <thead><tr><th>Tanggal</th><th>Customer</th><th>Produk</th><th>Kategori</th><th>Jenis</th><th>Deadline</th><th>Referral</th><th>Est. Nominal</th><th>Via</th><th>Status</th><th>PIC</th><th>Aksi</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -252,7 +258,7 @@ tbody tr.aging:hover{background:#f3d5d5}
       </div>
       <div class="tablewrap">
         <table id="custTable">
-          <thead><tr><th>Customer</th><th>Kontak</th><th>Via</th><th>Jenis</th><th>Inquiry</th><th>Deal</th><th>Total Deal</th><th>Status Terakhir</th><th>Acara Terakhir</th><th>PIC</th><th>Terakhir</th></tr></thead>
+          <thead><tr><th>Customer</th><th>Kontak</th><th>Via</th><th>Jenis</th><th>Inquiry</th><th>Quot.</th><th>Deal</th><th>Total Quotation</th><th>Total Deal</th><th>Status Terakhir</th><th>Acara Terakhir</th><th>PIC</th><th>Terakhir</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -274,13 +280,11 @@ tbody tr.aging:hover{background:#f3d5d5}
     </div>
     <div class="row2">
       <div class="field"><label>Jenis Inquiry</label>
-        <select id="eJenis">
-          <option value="">— Pilih —</option>
-          <option>Wedding</option><option>Corporate</option><option>Others</option>
-        </select>
+        <select id="eJenis"><option value="">— Pilih —</option></select>
       </div>
-      <div class="field"><label>Tanggal Acara</label><input type="date" id="eTanggal" /></div>
+      <div class="field"><label>Deadline</label><input type="date" id="eTanggal" /></div>
     </div>
+    <div class="field"><label>Kategori Produk</label><input id="eKategori" list="katProdukList" placeholder="Bag / Apparel / Carry goods / Accessories / Gloves — bisa ketik manual" /></div>
     <div class="row2">
       <div class="field"><label>Est. Nominal (Rp)</label><input type="number" id="eNominal" min="0" /></div>
       <div class="field"><label>Status</label>
@@ -291,6 +295,7 @@ tbody tr.aging:hover{background:#f3d5d5}
         </select>
       </div>
     </div>
+    <div class="field" id="eCancelWrap" style="display:none"><label>Alasan Cancel *</label><textarea id="eCancelReason" rows="2" style="width:100%;font-family:inherit;font-size:14px;padding:10px 12px;border:1.5px solid var(--cream2);border-radius:9px;background:var(--white);color:var(--text);outline:none;resize:vertical" placeholder="Kenapa inquiry ini cancel? (wajib untuk status Cancel)"></textarea></div>
     <div class="row2">
       <div class="field"><label>Contact Via</label>
         <select id="eContactVia">
@@ -314,6 +319,10 @@ tbody tr.aging:hover{background:#f3d5d5}
 
 <div class="toast" id="toast"></div>
 
+<datalist id="katProdukList">
+  <option>Bag</option><option>Apparel</option><option>Carry goods</option><option>Accessories</option><option>Gloves</option>
+</datalist>
+
 <script>
 /* ====== KONFIG ====== */
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyxK1M5xtaXSUO2_J5wbVPsc5QYsEIuIxrFCpFttce-KvSuTV7rkb9NSRxye5cIS2QX/exec';
@@ -324,6 +333,30 @@ let auth = { brand: '', password: '' };
 const $ = id => document.getElementById(id);
 const fmtRp = n => 'Rp ' + (Number(n)||0).toLocaleString('id-ID');
 const esc = s => String(s==null?'':s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ====== JENIS INQUIRY PER-BRAND ====== */
+const JENIS_BY_BRAND = {
+  'Winddam ID':      ['Whole-sale','Customized Order','Retail'],
+  'Revolt Industry': ['Whole-sale','Customized Order','Retail'],
+  'Rove Gifts':      ['Wedding','Corporate','Retail'],
+  'Radja Leather':   ['Internal client','External client'],
+};
+function jenisOptionsFor(brand){ return JENIS_BY_BRAND[brand] || ['Wedding','Corporate','Others']; }
+function setJenisOptions(brand){
+  const opts = jenisOptionsFor(brand);
+  [['fJenis','— Pilih —'],['eJenis','— Pilih —'],['qJenis','Semua Jenis']].forEach(([id,first])=>{
+    const el = $(id); if(!el) return;
+    const cur = el.value;
+    el.innerHTML = `<option value="">${first}</option>` +
+      opts.map(o=>`<option${o===cur?' selected':''}>${o}</option>`).join('');
+  });
+}
+
+/* ====== ALASAN CANCEL (tampil kalau status Cancel) ====== */
+function toggleCancel(pfx){
+  const st = ($(pfx+'Status').value || '');
+  $(pfx+'CancelWrap').style.display = st.indexOf('Cancel')>=0 ? '' : 'none';
+}
 
 function toast(msg, isErr){
   const t = $('toast'); t.textContent = msg;
@@ -355,6 +388,7 @@ async function login(){
     $('app').classList.add('show');
     $('brandBadge').classList.add('show');
     $('badgeBrand').textContent = brand;
+    setJenisOptions(brand);
     renderSummary(data.summary); renderList(data.inquiries);
   }catch(e){
     err.textContent = 'Gagal terhubung ke server. Cek koneksi / URL Web App.';
@@ -380,7 +414,32 @@ function renderSummary(s){
   $('sWait').textContent    = s.wait || 0;
   $('sCancel').textContent  = s.cancel || 0;
   $('sConv').textContent    = (s.convRate != null ? s.convRate : (s.total ? Math.round((s.deal/s.total)*100) : 0)) + '%';
+  $('sNominalQuote').textContent = fmtRp(s.nominalQuote || 0);
   $('sNominal').textContent = fmtRp(s.nominalDeal || 0);
+}
+
+/* ====== BULAN INI vs BULAN LALU (dari timestamp) ====== */
+const ID_MON = ['','Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+function ymOf(ts){ return String(ts||'').slice(0,7); } // "yyyy-MM"
+function ymLabel(ym){ const p=String(ym).split('-'); return (ID_MON[+p[1]]||'')+' '+p[0]; }
+function renderMoM(list){
+  const now = new Date();
+  const cur = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const pm  = new Date(now.getFullYear(), now.getMonth()-1, 1);
+  const prev= `${pm.getFullYear()}-${String(pm.getMonth()+1).padStart(2,'0')}`;
+  const agg = ym => {
+    const rows = (list||[]).filter(x=>ymOf(x.timestamp)===ym);
+    const deal = rows.filter(x=>(x.status||'').indexOf('Deal')>=0);
+    return { count: rows.length, dealCount: deal.length, nominalDeal: deal.reduce((s,x)=>s+(x.nominal||0),0) };
+  };
+  const c=agg(cur), p=agg(prev);
+  const delta=(a,b,isRp)=>{ const d=a-b, up=d>=0;
+    const v = isRp ? fmtRp(d) : ((d>=0?'+':'')+d);
+    return `<div style="font-size:11px;margin-top:4px;color:${up?'var(--green4)':'var(--red)'}">${up?'▲':'▼'} ${v} <span class="muted">vs ${ymLabel(prev)}</span></div>`; };
+  $('momBox').innerHTML = `
+    <div class="kpi"><h3>Inquiry ${ymLabel(cur)}</h3><div class="v num">${c.count}</div>${delta(c.count,p.count,false)}</div>
+    <div class="kpi deal"><h3>Deal ${ymLabel(cur)}</h3><div class="v num">${c.dealCount}</div>${delta(c.dealCount,p.dealCount,false)}</div>
+    <div class="kpi nominal"><h3>Nominal Deal ${ymLabel(cur)}</h3><div class="v num" style="font-size:20px">${fmtRp(c.nominalDeal)}</div>${delta(c.nominalDeal,p.nominalDeal,true)}</div>`;
 }
 function statusPill(st){
   if(st.indexOf('Deal')>=0)   return '<span class="pill deal">✅ Deal</span>';
@@ -417,6 +476,7 @@ function renderList(list){
   currentList = list || [];
   fillSelect('qVia', currentList.map(x=>x.contactVia), 'Semua Via');
   fillSelect('qPic', currentList.map(x=>x.salesPic),   'Semua PIC');
+  renderMoM(currentList);
   applyFilters();
 }
 
@@ -443,7 +503,7 @@ function applyFilters(){
 function drawList(rows){
   const tb = $('listTable').querySelector('tbody'); tb.innerHTML='';
   if(!rows.length){
-    tb.innerHTML = '<tr><td colspan="11" class="muted-empty">Belum ada inquiry yang cocok.</td></tr>'; return;
+    tb.innerHTML = '<tr><td colspan="12" class="muted-empty">Belum ada inquiry yang cocok.</td></tr>'; return;
   }
   rows.forEach((x)=>{
     const i = currentList.indexOf(x);
@@ -454,7 +514,7 @@ function drawList(rows){
     const tr = document.createElement('tr');
     if(aging) tr.className = 'aging';
     tr.innerHTML = `<td>${esc(x.timestamp)||'—'}</td><td>${esc(x.customer)||'—'}</td><td>${esc(x.product)||'—'}</td>
-      <td>${jenisTag(x.jenisInquiry)}</td><td>${esc(x.tanggalAcara)||'—'}</td><td>${esc(x.referral)||'—'}</td>
+      <td>${esc(x.kategori)||'—'}</td><td>${jenisTag(x.jenisInquiry)}</td><td>${esc(x.tanggalAcara)||'—'}</td><td>${esc(x.referral)||'—'}</td>
       <td class="num">${fmtRp(x.nominal)}</td><td>${esc(x.contactVia)||'—'}</td>
       <td>${statusPill(x.status||'')}${ageBadge}</td><td>${esc(x.salesPic)||'—'}</td>
       <td><button class="iconbtn" data-edit="${i}">✎ Edit</button></td>`;
@@ -467,6 +527,23 @@ $('qStatus').onchange = applyFilters;
 $('qJenis').onchange = applyFilters;
 $('qVia').onchange = applyFilters;
 $('qPic').onchange = applyFilters;
+
+/* ====== EXPORT EXCEL ====== */
+$('btnExcel').onclick = ()=>{
+  if(!currentList.length){ toast('Belum ada data untuk di-export.', true); return; }
+  const rows = currentList.map(x=>({
+    Tanggal: x.timestamp, Customer: x.customer, Produk: x.product, 'Kategori Produk': x.kategori,
+    'Jenis Inquiry': x.jenisInquiry, Deadline: x.tanggalAcara, Referral: x.referral,
+    'Est. Nominal': x.nominal, 'Contact Via': x.contactVia, 'Username/HP': x.contact,
+    Status: x.status, 'Sales PIC': x.salesPic, Notes: x.notes, 'Alasan Cancel': x.alasanCancel
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Inquiry');
+  const today = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `Inquiry_${auth.brand}_${today}.xlsx`);
+  toast('✅ Excel diunduh.');
+};
 
 /* ====== TABS ====== */
 $('tabInquiry').onclick = ()=> switchTab('inquiry');
@@ -484,19 +561,19 @@ function switchTab(which){
 let customers = [];
 async function loadCustomers(){
   const tb = $('custTable').querySelector('tbody');
-  tb.innerHTML = '<tr><td colspan="11" class="muted-empty">Memuat…</td></tr>';
+  tb.innerHTML = '<tr><td colspan="13" class="muted-empty">Memuat…</td></tr>';
   try{
     const url = APPS_SCRIPT_URL + '?action=getCustomers&brand=' + encodeURIComponent(auth.brand) + '&password=' + encodeURIComponent(auth.password);
     const res = await fetch(url);
     const data = await res.json();
-    if(!data.success){ tb.innerHTML = '<tr><td colspan="11" class="muted-empty">'+esc(data.error||'Gagal memuat')+'</td></tr>'; return; }
+    if(!data.success){ tb.innerHTML = '<tr><td colspan="13" class="muted-empty">'+esc(data.error||'Gagal memuat')+'</td></tr>'; return; }
     customers = data.customers || [];
     fillSelect('cVia',   customers.map(c=>c.contactVia),   'Semua Via');
     fillSelect('cJenis', customers.map(c=>c.jenisInquiry), 'Semua Jenis');
     fillSelect('cPic',   customers.map(c=>c.salesPic),     'Semua PIC');
     drawCustomers();
   }catch(e){
-    tb.innerHTML = '<tr><td colspan="11" class="muted-empty">Gagal terhubung ke server.</td></tr>';
+    tb.innerHTML = '<tr><td colspan="13" class="muted-empty">Gagal terhubung ke server.</td></tr>';
   }
 }
 function drawCustomers(){
@@ -516,13 +593,13 @@ function drawCustomers(){
   else if(sort==='inquiry') rows.sort((a,b)=>(b.count||0)-(a.count||0));
   else if(sort==='recent')  rows.sort((a,b)=>String(b.lastSeen||'').localeCompare(String(a.lastSeen||'')));
   if(!rows.length){
-    tb.innerHTML = '<tr><td colspan="11" class="muted-empty">Tidak ada customer yang cocok.</td></tr>'; return;
+    tb.innerHTML = '<tr><td colspan="13" class="muted-empty">Tidak ada customer yang cocok.</td></tr>'; return;
   }
   rows.forEach(c=>{
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${esc(c.customer)||'—'}</td><td>${esc(c.contact)||'—'}</td><td>${esc(c.contactVia)||'—'}</td>
-      <td>${jenisTag(c.jenisInquiry)}</td><td class="num">${c.count||0}</td><td class="num">${c.dealCount||0}</td>
-      <td class="num">${fmtRp(c.totalDeal)}</td><td>${statusPill(c.lastStatus||'')}</td>
+      <td>${jenisTag(c.jenisInquiry)}</td><td class="num">${c.count||0}</td><td class="num">${c.quoteCount||0}</td><td class="num">${c.dealCount||0}</td>
+      <td class="num">${fmtRp(c.totalQuote)}</td><td class="num">${fmtRp(c.totalDeal)}</td><td>${statusPill(c.lastStatus||'')}</td>
       <td>${esc(c.lastEvent)||'—'}</td><td>${esc(c.salesPic)||'—'}</td><td>${esc(c.lastSeen)||'—'}</td>`;
     tb.appendChild(tr);
   });
@@ -547,14 +624,21 @@ function openEdit(i){
   $('eReferral').value = x.referral || '';
   $('ePic').value      = x.salesPic || '';
   $('eNotes').value    = x.notes || '';
+  $('eKategori').value = x.kategori || '';
+  $('eCancelReason').value = x.alasanCancel || '';
+  toggleCancel('e');
   $('ovEdit').classList.add('show');
 }
 $('cancelEditBtn').onclick = ()=> $('ovEdit').classList.remove('show');
 $('ovEdit').onclick = e => { if(e.target.id==='ovEdit') $('ovEdit').classList.remove('show'); };
 
+$('eStatus').addEventListener('change', ()=>toggleCancel('e'));
 $('saveEditBtn').onclick = async ()=>{
   const customer = $('eCustomer').value.trim();
   if(!customer){ toast('Nama customer wajib diisi.', true); return; }
+  const eStatus = $('eStatus').value;
+  const eReason = $('eCancelReason').value.trim();
+  if(eStatus.indexOf('Cancel')>=0 && !eReason){ toast('Alasan Cancel wajib diisi.', true); return; }
   const payload = {
     type: 'inquiryUpdate',
     brand: auth.brand,
@@ -562,15 +646,17 @@ $('saveEditBtn').onclick = async ()=>{
     row: $('eRow').value,
     customerName: customer,
     product: $('eProduct').value.trim(),
+    kategori: $('eKategori').value.trim(),
     jenisInquiry: $('eJenis').value,
     tanggalAcara: $('eTanggal').value,
     nominal: parseFloat($('eNominal').value) || 0,
-    status: $('eStatus').value,
+    status: eStatus,
     contactVia: $('eContactVia').value,
     contactDetail: $('eContact').value.trim(),
     referral: $('eReferral').value.trim(),
     salesPic: $('ePic').value.trim(),
     notes: $('eNotes').value.trim(),
+    alasanCancel: eReason,
   };
   $('saveEditBtn').disabled = true; $('saveEditBtn').textContent = 'Menyimpan…';
   try{
@@ -593,10 +679,14 @@ $('saveEditBtn').onclick = async ()=>{
 
 /* ====== SUBMIT ====== */
 $('submitBtn').onclick = submitInquiry;
+$('fStatus').addEventListener('change', ()=>toggleCancel('f'));
 
 async function submitInquiry(){
   const customer = $('fCustomer').value.trim();
   if(!customer){ toast('Nama customer wajib diisi.', true); return; }
+  const fStatus = $('fStatus').value;
+  const fReason = $('fCancelReason').value.trim();
+  if(fStatus.indexOf('Cancel')>=0 && !fReason){ toast('Alasan Cancel wajib diisi.', true); return; }
 
   const payload = {
     type: 'inquiry',
@@ -604,15 +694,17 @@ async function submitInquiry(){
     password: auth.password,
     customerName: customer,
     product: $('fProduct').value.trim(),
+    kategori: $('fKategori').value.trim(),
     jenisInquiry: $('fJenis').value,
     tanggalAcara: $('fTanggal').value,
     nominal: parseFloat($('fNominal').value) || 0,
-    status: $('fStatus').value,
+    status: fStatus,
     contactVia: $('fContactVia').value,
     contactDetail: $('fContact').value.trim(),
     referral: $('fReferral').value.trim(),
     salesPic: $('fPic').value.trim(),
     notes: $('fNotes').value.trim(),
+    alasanCancel: fReason,
   };
 
   $('submitBtn').disabled = true; $('submitBtn').textContent = 'Mengirim…';
@@ -627,8 +719,9 @@ async function submitInquiry(){
 
     toast('✅ Inquiry tersimpan!');
     // Reset form
-    ['fCustomer','fProduct','fTanggal','fNominal','fContact','fReferral','fPic','fNotes'].forEach(id=> $(id).value='');
+    ['fCustomer','fProduct','fKategori','fTanggal','fNominal','fContact','fReferral','fPic','fNotes','fCancelReason'].forEach(id=> $(id).value='');
     $('fStatus').selectedIndex = 0; $('fContactVia').selectedIndex = 0; $('fJenis').selectedIndex = 0;
+    toggleCancel('f');
     await refresh();
   }catch(e){
     toast('Gagal terhubung ke server.', true);
