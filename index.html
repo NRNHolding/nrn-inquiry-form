@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>NRN — Inquiry Form</title>
+<title>NRN — Brand Needs</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
@@ -66,6 +66,25 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
 .tab{font-family:inherit;font-size:13px;font-weight:600;padding:8px 16px;border-radius:10px;border:1.5px solid var(--cream2);background:var(--white);color:var(--text2);cursor:pointer}
 .tab.active{background:var(--green);color:#fff;border-color:var(--green)}
 .view{display:none}.view.show{display:block}
+/* top-level brand tabs */
+.ntabs{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:18px;border-bottom:2px solid var(--cream2);padding-bottom:0}
+.ntab{font-family:inherit;font-size:13.5px;font-weight:700;padding:10px 18px;border:none;background:transparent;color:var(--text3);cursor:pointer;border-radius:10px 10px 0 0;border-bottom:3px solid transparent;margin-bottom:-2px}
+.ntab:hover{color:var(--green)}
+.ntab.on{color:var(--green);border-bottom-color:var(--gold);background:var(--white)}
+.pane{display:none}.pane.show{display:block}
+/* calendar */
+.calbar{display:flex;align-items:center;gap:14px;justify-content:center;margin:14px 0 10px}
+.calmon{font-family:'DM Serif Display',serif;font-size:17px;color:var(--green)}
+.calhead{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px}
+.calhead div{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;color:var(--text3);text-align:center;font-weight:600}
+.calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.calcell{min-height:78px;border:1px solid var(--cream2);border-radius:8px;background:var(--white);padding:5px 5px 3px}
+.calcell.empty{background:transparent;border:none}
+.calcell.today{border-color:var(--gold);background:var(--gold-bg)}
+.calnum{font-family:'DM Mono',monospace;font-size:11px;font-weight:700;color:var(--text2);margin-bottom:3px}
+.calitem{font-size:9.5px;line-height:1.25;background:var(--green-bg);color:var(--green4);border-radius:4px;padding:2px 4px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:default}
+.calitem.done{background:var(--cream2);color:var(--text3);text-decoration:line-through}
+@media(max-width:640px){.calcell{min-height:56px}.calitem{font-size:8.5px}}
 /* filter bar */
 .filterbar{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:11px}
 .filterbar input,.filterbar select{height:38px;padding:0 11px;border:1.5px solid var(--cream2);border-radius:9px;background:var(--white);font-size:13px;font-family:inherit;color:var(--text);outline:none}
@@ -107,8 +126,8 @@ tbody tr.aging:hover{background:#f3d5d5}
 <div class="header">
   <div class="header-in">
     <div>
-      <div class="eyebrow">NRN Holding · Sales Inquiry</div>
-      <h1>Inquiry <em>Form</em></h1>
+      <div class="eyebrow">NRN Holding · Brand Tools</div>
+      <h1>Brand <em>Needs</em></h1>
     </div>
     <div class="spacer"></div>
     <div class="brandbadge" id="brandBadge">
@@ -144,6 +163,14 @@ tbody tr.aging:hover{background:#f3d5d5}
 
   <!-- APP -->
   <div id="app">
+    <div class="ntabs" id="brandTabs">
+      <button class="ntab on" data-pane="inquiry">📋 Inquiry</button>
+      <button class="ntab" data-pane="agenda">📌 Agenda</button>
+      <button class="ntab" data-pane="finance">💰 Finance</button>
+      <button class="ntab" data-pane="marketing">📊 Marketing</button>
+    </div>
+
+    <div id="pane-inquiry" class="pane show">
     <!-- Summary -->
     <div class="section-title">📊 Summary Inquiry</div>
     <div class="kpis">
@@ -264,6 +291,11 @@ tbody tr.aging:hover{background:#f3d5d5}
       </div>
       <div class="note">Database otomatis dari semua inquiry brand ini (digabung per nama customer). Sumber: tab "👥 Customer Database" di Google Sheets.</div>
     </div>
+    </div><!-- /pane-inquiry -->
+
+    <div id="pane-agenda"    class="pane"></div>
+    <div id="pane-finance"   class="pane"></div>
+    <div id="pane-marketing" class="pane"></div>
   </div>
 
 </div>
@@ -332,6 +364,7 @@ let auth = { brand: '', password: '' };
 
 const $ = id => document.getElementById(id);
 const fmtRp = n => 'Rp ' + (Number(n)||0).toLocaleString('id-ID');
+const fmtNum = n => (Number(n)||0).toLocaleString('id-ID');
 const esc = s => String(s==null?'':s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 /* ====== JENIS INQUIRY PER-BRAND ====== */
@@ -404,6 +437,10 @@ $('logoutBtn').onclick = ()=>{
   $('brandBadge').classList.remove('show');
   $('login').style.display = '';
   $('loginPw').value = '';
+  // reset panes brand needs
+  agendaLoaded = mktLoaded = finLoaded = false; finPw = '';
+  brandAgenda = brandFin = brandMkt = null; calYear = undefined;
+  switchPane('inquiry');
 };
 
 /* ====== RENDER SUMMARY ====== */
@@ -739,6 +776,167 @@ async function refresh(){
     // Kalau tab customer sedang aktif, refresh juga
     if($('viewCustomer').classList.contains('show')) loadCustomers();
   }catch(e){ /* diam */ }
+}
+
+/* ══════════ BRAND NEEDS — PANES (Agenda / Finance / Marketing) ══════════ */
+let agendaLoaded=false, mktLoaded=false, finLoaded=false, finPw='';
+let brandAgenda=null, brandFin=null, brandMkt=null;
+let agendaViewMode='list', calYear, calMonth;
+const AG_MON=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+
+function switchPane(pane){
+  document.querySelectorAll('.ntab').forEach(b=>b.classList.toggle('on', b.dataset.pane===pane));
+  document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('show', p.id==='pane-'+pane));
+  if(pane==='agenda'    && !agendaLoaded) loadBrandAgenda();
+  if(pane==='marketing' && !mktLoaded)    loadBrandMarketing();
+  if(pane==='finance')  openFinancePane();
+}
+document.querySelectorAll('.ntab').forEach(b=> b.onclick=()=>switchPane(b.dataset.pane));
+
+/* ---- AGENDA ---- */
+function agStatusLabel(st){const z=String(st||'');if(z==='Done')return'Done';if(z==='In Progress'||z==='On Progress')return'In Progress';if(z.indexOf('Checklist')>=0||z==='Planned')return'Checklist Created';if(z.indexOf('Task')>=0)return'Task Created';return z||'—';}
+function agPill(st){const L=agStatusLabel(st);
+  if(L==='Done')return'<span class="pill deal">Done</span>';
+  if(L==='In Progress')return'<span class="pill wait">In Progress</span>';
+  if(L==='Checklist Created')return'<span class="pill" style="background:#e3eef5;color:#1d4e6f">Checklist Created</span>';
+  return'<span class="pill" style="background:var(--cream2);color:var(--text2)">'+L+'</span>';}
+async function loadBrandAgenda(){
+  const box=$('pane-agenda'); box.innerHTML='<div class="note" style="padding:24px;text-align:center">⏳ Memuat agenda…</div>';
+  try{
+    const url=APPS_SCRIPT_URL+'?action=getBrandAgenda&brand='+encodeURIComponent(auth.brand)+'&password='+encodeURIComponent(auth.password);
+    const d=await (await fetch(url)).json();
+    if(!d.success){ box.innerHTML='<div class="err show">'+esc(d.error||'Gagal memuat')+'</div>'; return; }
+    brandAgenda=d; agendaLoaded=true; renderBrandAgenda();
+  }catch(e){ box.innerHTML='<div class="err show">Gagal terhubung ke server.</div>'; }
+}
+function renderBrandAgenda(){
+  const box=$('pane-agenda'), s=brandAgenda.summary, det=brandAgenda.detail||[];
+  const head=`
+    <div class="section-title">📌 Agenda — ${esc(brandAgenda.brand)}</div>
+    <div class="kpis">
+      <div class="kpi"><h3>Total Agenda</h3><div class="v num">${s.total}</div></div>
+      <div class="kpi deal"><h3>✓ Done</h3><div class="v num">${s.done}</div></div>
+      <div class="kpi wait"><h3>◐ On Progress</h3><div class="v num">${s.onProgress}</div></div>
+      <div class="kpi"><h3>○ Planned</h3><div class="v num">${s.planned}</div></div>
+    </div>
+    <div class="tabs" style="margin-top:16px">
+      <button class="tab ${agendaViewMode==='list'?'active':''}" id="agViewList">📋 List</button>
+      <button class="tab ${agendaViewMode==='calendar'?'active':''}" id="agViewCal">📅 Kalender</button>
+    </div>`;
+  let body;
+  if(agendaViewMode==='list'){
+    const rows=det.length?det.map(x=>`<tr>
+      <td>${esc(x.card)||'—'}</td><td>${esc(x.subtask)||'—'}</td><td>${esc(x.bulan)||'—'}</td>
+      <td>${esc(x.deadline)||'—'}</td><td>${agStatusLabel(x.status)==='Done'?'✓ Completed':(x.sisaHari==null?'—':x.sisaHari+' hari')}</td>
+      <td>${agPill(x.status)}</td><td class="muted">${esc(x.pic)||'—'}</td></tr>`).join(''):'<tr><td colspan="7" class="muted-empty" style="text-align:center;padding:20px">Belum ada agenda.</td></tr>';
+    body=`<div class="tablewrap"><table><thead><tr><th>Card / Agenda</th><th>Subtask</th><th>Bulan</th><th>Deadline</th><th>Sisa Hari</th><th>Status</th><th>PIC</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  } else { body=renderAgendaCalendar(det); }
+  box.innerHTML=head+body;
+  $('agViewList').onclick=()=>{agendaViewMode='list';renderBrandAgenda();};
+  $('agViewCal').onclick=()=>{agendaViewMode='calendar';renderBrandAgenda();};
+  if(agendaViewMode==='calendar'){
+    $('calPrev').onclick=()=>{calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderBrandAgenda();};
+    $('calNext').onclick=()=>{calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderBrandAgenda();};
+  }
+}
+function renderAgendaCalendar(det){
+  const now=new Date();
+  if(calYear===undefined){ calYear=now.getFullYear(); calMonth=now.getMonth(); }
+  const pad=n=>String(n).padStart(2,'0');
+  const byDate={}; det.forEach(x=>{ if(x.deadlineISO){ (byDate[x.deadlineISO]=byDate[x.deadlineISO]||[]).push(x); } });
+  const startDow=(new Date(calYear,calMonth,1).getDay()+6)%7; // Senin=0
+  const dim=new Date(calYear,calMonth+1,0).getDate();
+  const cells=[]; for(let i=0;i<startDow;i++)cells.push(''); for(let d=1;d<=dim;d++)cells.push(d); while(cells.length%7)cells.push('');
+  const todayISO=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+  const grid=cells.map(d=>{
+    if(d==='')return'<div class="calcell empty"></div>';
+    const iso=`${calYear}-${pad(calMonth+1)}-${pad(d)}`, items=byDate[iso]||[];
+    const chips=items.map(x=>`<div class="calitem${agStatusLabel(x.status)==='Done'?' done':''}" title="${esc(x.card)} — ${esc(x.subtask)}">${esc((x.subtask||x.card)).slice(0,24)}</div>`).join('');
+    return `<div class="calcell${iso===todayISO?' today':''}"><div class="calnum">${d}</div>${chips}</div>`;
+  }).join('');
+  const dow=['Sen','Sel','Rab','Kam','Jum','Sab','Min'];
+  return `<div class="calbar"><button class="iconbtn" id="calPrev">←</button><span class="calmon">${AG_MON[calMonth]} ${calYear}</span><button class="iconbtn" id="calNext">→</button></div>
+    <div class="calhead">${dow.map(d=>`<div>${d}</div>`).join('')}</div><div class="calgrid">${grid}</div>`;
+}
+
+/* ---- FINANCE (password gate) ---- */
+function openFinancePane(){
+  if(finLoaded){ renderBrandFinance(); return; }
+  $('pane-finance').innerHTML=`
+    <div class="section-title">💰 Finance — ${esc(auth.brand)}</div>
+    <div class="card" style="max-width:420px">
+      <p class="muted" style="margin-bottom:12px">Section Finance dilindungi password khusus.</p>
+      <div class="err" id="finErr"></div>
+      <div class="field"><label>Password Finance</label><input type="password" id="finPwInput" placeholder="Password Finance"/></div>
+      <button class="btn btn-gold" id="finUnlock" style="width:100%">Buka Finance →</button>
+    </div>`;
+  $('finUnlock').onclick=unlockFinance;
+  $('finPwInput').addEventListener('keydown',e=>{if(e.key==='Enter')unlockFinance();});
+}
+async function unlockFinance(){
+  const pw=$('finPwInput').value, err=$('finErr');
+  if(!pw){ err.textContent='Masukkan password.'; err.className='err show'; return; }
+  const btn=$('finUnlock'); btn.disabled=true; btn.textContent='Memeriksa…';
+  try{
+    const url=APPS_SCRIPT_URL+'?action=getBrandFinance&brand='+encodeURIComponent(auth.brand)+'&password='+encodeURIComponent(pw);
+    const d=await (await fetch(url)).json();
+    if(!d.success){ err.textContent=d.error||'Password salah.'; err.className='err show'; return; }
+    finPw=pw; brandFin=d; finLoaded=true; renderBrandFinance();
+  }catch(e){ err.textContent='Gagal terhubung ke server.'; err.className='err show'; }
+  finally{ btn.disabled=false; btn.textContent='Buka Finance →'; }
+}
+function renderBrandFinance(){
+  const box=$('pane-finance'), rows=brandFin.rows||[], detail=brandFin.detail||[];
+  const sum=(a,k)=>a.reduce((s,x)=>s+(x[k]||0),0);
+  const est=sum(rows,'est'),proj=sum(rows,'proj'),act=sum(rows,'act');
+  const byMonth={}; rows.forEach(r=>{(byMonth[r.month]=byMonth[r.month]||[]).push(r);});
+  const mRows=Object.keys(byMonth).sort((a,b)=>AG_MON.indexOf(a)-AG_MON.indexOf(b)).map(m=>{
+    const mr=byMonth[m],e=sum(mr,'est'),p=sum(mr,'proj'),a=sum(mr,'act');
+    return `<tr><td><b>${m}</b></td><td class="num">${fmtRp(e)}</td><td class="num">${fmtRp(p)}</td><td class="num">${fmtRp(a)}</td></tr>`;
+  }).join('')||'<tr><td colspan="4" class="muted-empty" style="text-align:center;padding:16px">Belum ada data.</td></tr>';
+  const dRows=detail.slice().sort((a,b)=>AG_MON.indexOf(a.month)-AG_MON.indexOf(b.month)).map(d=>
+    `<tr><td>${esc(d.month)}</td><td>${esc(d.card)}</td><td class="muted">${esc(d.subtask)}</td><td>${esc(d.deadline)||'—'}</td><td class="num">${fmtRp(d.nominal)}</td></tr>`
+  ).join('')||'<tr><td colspan="5" class="muted-empty" style="text-align:center;padding:16px">Belum ada rincian.</td></tr>';
+  box.innerHTML=`
+    <div class="section-title">💰 Finance — ${esc(auth.brand)} · ${brandFin.year}</div>
+    <div class="kpis">
+      <div class="kpi"><h3>Budget Estimasi</h3><div class="v num">${fmtRp(est)}</div></div>
+      <div class="kpi wait"><h3>Proyeksi (Checklist)</h3><div class="v num">${fmtRp(proj)}</div></div>
+      <div class="kpi"><h3>Budget Aktual</h3><div class="v num">${fmtRp(act)}</div></div>
+    </div>
+    <div class="section-title">📅 Per Bulan</div>
+    <div class="tablewrap"><table><thead><tr><th>Bulan</th><th>Budget Est.</th><th>Proyeksi</th><th>Aktual</th></tr></thead><tbody>${mRows}</tbody></table></div>
+    <div class="section-title">🧾 Rincian Pengeluaran</div>
+    <div class="tablewrap"><table><thead><tr><th>Bulan</th><th>Task / Card</th><th>Checklist</th><th>Tanggal</th><th>Nominal</th></tr></thead><tbody>${dRows}</tbody></table></div>`;
+}
+
+/* ---- MARKETING ---- */
+async function loadBrandMarketing(){
+  const box=$('pane-marketing'); box.innerHTML='<div class="note" style="padding:24px;text-align:center">⏳ Memuat marketing…</div>';
+  try{
+    const url=APPS_SCRIPT_URL+'?action=getBrandMarketing&brand='+encodeURIComponent(auth.brand)+'&password='+encodeURIComponent(auth.password);
+    const d=await (await fetch(url)).json();
+    if(!d.success){ box.innerHTML='<div class="err show">'+esc(d.error||'Gagal memuat')+'</div>'; return; }
+    brandMkt=d; mktLoaded=true; renderBrandMarketing();
+  }catch(e){ box.innerHTML='<div class="err show">Gagal terhubung ke server.</div>'; }
+}
+function renderBrandMarketing(){
+  const box=$('pane-marketing'), rows=brandMkt.rows||[];
+  const sum=k=>rows.reduce((s,x)=>s+(x[k]||0),0), avg=k=>rows.length?rows.reduce((s,x)=>s+(x[k]||0),0)/rows.length:0;
+  const tb=rows.length?rows.slice().sort((a,b)=>AG_MON.indexOf(a.month)-AG_MON.indexOf(b.month)).map(r=>`<tr>
+    <td>${esc(r.month)} ${r.year}</td><td class="num">${fmtNum(r.posts)}</td><td class="num">${fmtNum(r.reach)}</td>
+    <td class="num">${fmtNum(r.views)}</td><td class="num">${fmtNum(r.likes)}</td><td class="num">${fmtNum(r.saves)}</td>
+    <td class="num">${fmtNum(r.follows)}</td><td class="num">${(r.avgER||0).toFixed(2)}%</td><td class="num">${r.storyER==null?'—':r.storyER.toFixed(2)+'%'}</td></tr>`).join(''):'<tr><td colspan="9" class="muted-empty" style="text-align:center;padding:20px">Belum ada laporan.</td></tr>';
+  box.innerHTML=`
+    <div class="section-title">📊 Marketing (Socmed KPI) — ${esc(auth.brand)}</div>
+    <div class="kpis">
+      <div class="kpi"><h3>Total Reach</h3><div class="v num">${fmtNum(sum('reach'))}</div></div>
+      <div class="kpi"><h3>Total Views</h3><div class="v num">${fmtNum(sum('views'))}</div></div>
+      <div class="kpi conv"><h3>Avg ER%</h3><div class="v num">${avg('avgER').toFixed(2)}%</div></div>
+      <div class="kpi deal"><h3>New Follows</h3><div class="v num">${fmtNum(sum('follows'))}</div></div>
+    </div>
+    <div class="section-title">📑 Detail per Laporan</div>
+    <div class="tablewrap"><table><thead><tr><th>Periode</th><th>Posts</th><th>Reach</th><th>Views</th><th>Likes</th><th>Saves</th><th>Follows</th><th>Avg ER</th><th>Story ER</th></tr></thead><tbody>${tb}</tbody></table></div>`;
 }
 </script>
 </body>
