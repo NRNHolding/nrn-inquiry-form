@@ -15,6 +15,7 @@
  --cream:#f6f2ea;--cream2:#ece5d8;--cream3:#e0d8c8;--white:#fff;
  --red:#9b2226;--red-bg:#f7e3e3;--amber:#7f5000;--amber-bg:#fff0cc;
  --blue:#1d4e6f;--blue-bg:#e3eef5;
+ --purple:#5b3a8e;--purple-bg:#ece4f7;
  --text:#241c12;--text2:#4f4534;--text3:#8a8170;
  --radius:13px;--shadow:0 4px 22px rgba(35,40,30,.10);
 }
@@ -59,6 +60,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
 .kpi h3{font-family:'DM Mono',monospace;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--green4);font-weight:500}
 .kpi .v{font-family:'DM Serif Display',serif;font-size:24px;color:var(--green);margin-top:3px}
 .kpi.deal .v{color:var(--green4)}.kpi.wait .v{color:var(--amber)}.kpi.cancel .v{color:var(--red)}
+.kpi.sampling .v{color:var(--purple)}
 .kpi.conv .v{color:var(--blue)}
 .kpi.nominal{grid-column:span 1}.kpi.nominal .v{font-size:18px}
 /* tabs */
@@ -101,6 +103,7 @@ tbody tr.aging:hover{background:#f3d5d5}
 .pill.deal{background:var(--green-bg);color:var(--green4)}
 .pill.wait{background:var(--amber-bg);color:var(--amber)}
 .pill.cancel{background:var(--red-bg);color:var(--red)}
+.pill.sampling{background:var(--purple-bg);color:var(--purple)}
 .tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;display:inline-block;background:var(--cream2);color:var(--text2)}
 .tag.wedding{background:#fbe4ec;color:#a8326a}
 .tag.corporate{background:var(--blue-bg);color:var(--blue)}
@@ -176,8 +179,9 @@ tbody tr.aging:hover{background:#f3d5d5}
     <div class="section-title">📊 Summary Inquiry</div>
     <div class="kpis">
       <div class="kpi"><h3>Total</h3><div class="v num" id="sTotal">0</div></div>
-      <div class="kpi deal"><h3>✅ Deal</h3><div class="v num" id="sDeal">0</div></div>
       <div class="kpi wait"><h3>📝 Quotation</h3><div class="v num" id="sWait">0</div></div>
+      <div class="kpi sampling"><h3>🔬 On going sampling</h3><div class="v num" id="sSampling">0</div></div>
+      <div class="kpi deal"><h3>✅ Deal</h3><div class="v num" id="sDeal">0</div></div>
       <div class="kpi cancel"><h3>❌ Cancel</h3><div class="v num" id="sCancel">0</div></div>
       <div class="kpi conv"><h3>📈 Conversion</h3><div class="v num" id="sConv">0%</div></div>
       <div class="kpi wait"><h3>💰 Nominal Quotation</h3><div class="v num" id="sNominalQuote">Rp 0</div></div>
@@ -207,6 +211,7 @@ tbody tr.aging:hover{background:#f3d5d5}
         <div class="field"><label>Status</label>
           <select id="fStatus">
             <option value="📝 Quotation">📝 Quotation</option>
+            <option value="🔬 On going sampling">🔬 On going sampling</option>
             <option value="✅ Deal">✅ Deal</option>
             <option value="❌ Cancel">❌ Cancel</option>
           </select>
@@ -244,6 +249,7 @@ tbody tr.aging:hover{background:#f3d5d5}
         <select id="qStatus">
           <option value="">Semua Status</option>
           <option value="📝 Quotation">📝 Quotation</option>
+          <option value="🔬 On going sampling">🔬 On going sampling</option>
           <option value="✅ Deal">✅ Deal</option>
           <option value="❌ Cancel">❌ Cancel</option>
         </select>
@@ -257,11 +263,12 @@ tbody tr.aging:hover{background:#f3d5d5}
       </div>
       <div class="tablewrap">
         <table id="listTable">
-          <thead><tr><th>Tanggal</th><th>Customer</th><th>Produk</th><th>Kategori</th><th>Jenis</th><th>Deadline</th><th>Referral</th><th>Est. Nominal</th><th>Via</th><th>Status</th><th>PIC</th><th>Aksi</th></tr></thead>
+          <thead><tr><th>Tanggal</th><th>Customer</th><th>Produk</th><th>Kategori</th><th>Jenis</th><th>Deadline</th><th>Referral</th><th>Est. Nominal</th><th>Via</th><th>Status</th><th>Tgl Quotation</th><th>Tgl Sampling</th><th>Tgl Deal</th><th>Tgl Cancel</th><th>PIC</th><th>Aksi</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
-      <div class="note">🔥 Baris merah = Quotation yang sudah &gt; 7 hari belum closing — perlu di-follow up.</div>
+      <div class="note">🔥 Baris merah = Quotation / sampling yang sudah &gt; 7 hari belum closing — perlu di-follow up.<br>
+        Kolom <b>Tgl Quotation / Sampling / Deal / Cancel</b> terisi otomatis saat status pertama kali masuk tahap itu, dan tidak berubah lagi (jejak timeline).</div>
     </div>
 
     <!-- View: Customer database -->
@@ -270,8 +277,9 @@ tbody tr.aging:hover{background:#f3d5d5}
         <input id="cSearch" placeholder="🔍 Cari customer / kontak…" />
         <select id="cStatus">
           <option value="">Semua Status</option>
-          <option value="✅ Deal">✅ Deal</option>
           <option value="📝 Quotation">📝 Quotation</option>
+          <option value="🔬 On going sampling">🔬 On going sampling</option>
+          <option value="✅ Deal">✅ Deal</option>
           <option value="❌ Cancel">❌ Cancel</option>
         </select>
         <select id="cVia"><option value="">Semua Via</option></select>
@@ -286,7 +294,7 @@ tbody tr.aging:hover{background:#f3d5d5}
       </div>
       <div class="tablewrap">
         <table id="custTable">
-          <thead><tr><th>Customer</th><th>Kontak</th><th>Via</th><th>Jenis</th><th>Inquiry</th><th>Quot.</th><th>Deal</th><th>Total Quotation</th><th>Total Deal</th><th>Status Terakhir</th><th>Acara Terakhir</th><th>PIC</th><th>Terakhir</th></tr></thead>
+          <thead><tr><th>Customer</th><th>Kontak</th><th>Via</th><th>Jenis</th><th>Inquiry</th><th>Berjalan</th><th>Sampling</th><th>Deal</th><th>Total Quotation</th><th>Total Deal</th><th>Status Terakhir</th><th>Acara Terakhir</th><th>PIC</th><th>Terakhir</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -324,11 +332,13 @@ tbody tr.aging:hover{background:#f3d5d5}
       <div class="field"><label>Status</label>
         <select id="eStatus">
           <option value="📝 Quotation">📝 Quotation</option>
+          <option value="🔬 On going sampling">🔬 On going sampling</option>
           <option value="✅ Deal">✅ Deal</option>
           <option value="❌ Cancel">❌ Cancel</option>
         </select>
       </div>
     </div>
+    <div class="field"><label>Timeline Status</label><div id="eTimeline" class="note" style="margin-top:0"></div></div>
     <div class="field" id="eCancelWrap" style="display:none"><label>Alasan Cancel *</label><textarea id="eCancelReason" rows="2" style="width:100%;font-family:inherit;font-size:14px;padding:10px 12px;border:1.5px solid var(--cream2);border-radius:9px;background:var(--white);color:var(--text);outline:none;resize:vertical" placeholder="Kenapa inquiry ini cancel? (wajib untuk status Cancel)"></textarea></div>
     <div class="row2">
       <div class="field"><label>Contact Via</label>
@@ -450,7 +460,9 @@ function renderSummary(s){
   s = s || {};
   $('sTotal').textContent   = s.total || 0;
   $('sDeal').textContent    = s.deal || 0;
-  $('sWait').textContent    = s.wait || 0;
+  // sWait = Quotation saja; sampling punya kartu sendiri
+  $('sWait').textContent     = (s.quotation != null ? s.quotation : (s.wait || 0));
+  $('sSampling').textContent = s.sampling || 0;
   $('sCancel').textContent  = s.cancel || 0;
   $('sConv').textContent    = (s.convRate != null ? s.convRate : (s.total ? Math.round((s.deal/s.total)*100) : 0)) + '%';
   $('sNominalQuote').textContent = fmtRp(s.nominalQuote || 0);
@@ -480,10 +492,19 @@ function renderMoM(list){
     <div class="kpi deal"><h3>Deal ${ymLabel(cur)}</h3><div class="v num">${c.dealCount}</div>${delta(c.dealCount,p.dealCount,false)}</div>
     <div class="kpi nominal"><h3>Nominal Deal ${ymLabel(cur)}</h3><div class="v num" style="font-size:20px">${fmtRp(c.nominalDeal)}</div>${delta(c.nominalDeal,p.nominalDeal,true)}</div>`;
 }
+// Normalisasi status → key (harus sama dgn inqStatusKey_ di backend)
+function statusKey_(s){
+  const z = String(s||'');
+  if(z.indexOf('Deal')>=0)   return 'deal';
+  if(z.indexOf('Cancel')>=0) return 'cancel';
+  if(z.toLowerCase().indexOf('sampling')>=0) return 'sampling';
+  return 'quotation';
+}
+const ST_LABEL = { quotation:'📝 Quotation', sampling:'🔬 On going sampling', deal:'✅ Deal', cancel:'❌ Cancel' };
+const ST_CLASS = { quotation:'wait', sampling:'sampling', deal:'deal', cancel:'cancel' };
 function statusPill(st){
-  if(st.indexOf('Deal')>=0)   return '<span class="pill deal">✅ Deal</span>';
-  if(st.indexOf('Cancel')>=0) return '<span class="pill cancel">❌ Cancel</span>';
-  return '<span class="pill wait">📝 Quotation</span>';
+  const k = statusKey_(st);
+  return '<span class="pill '+ST_CLASS[k]+'">'+ST_LABEL[k]+'</span>';
 }
 function jenisTag(j){
   if(!j) return '<span class="muted-empty">—</span>';
@@ -507,8 +528,6 @@ function fillSelect(id, values, allLabel){
   el.innerHTML = `<option value="">${allLabel}</option>` +
     uniq.map(v=>`<option value="${esc(v)}"${v===cur?' selected':''}>${esc(v)}</option>`).join('');
 }
-function statusKey_(s){ s=s||''; return s.indexOf('Deal')>=0?'Deal':s.indexOf('Cancel')>=0?'Cancel':'Quotation'; }
-
 /* ====== INQUIRY LIST + FILTER ====== */
 let currentList = [];
 function renderList(list){
@@ -542,11 +561,12 @@ function applyFilters(){
 function drawList(rows){
   const tb = $('listTable').querySelector('tbody'); tb.innerHTML='';
   if(!rows.length){
-    tb.innerHTML = '<tr><td colspan="12" class="muted-empty">Belum ada inquiry yang cocok.</td></tr>'; return;
+    tb.innerHTML = '<tr><td colspan="16" class="muted-empty">Belum ada inquiry yang cocok.</td></tr>'; return;
   }
   rows.forEach((x)=>{
     const i = currentList.indexOf(x);
-    const isQuote = (x.status||'').indexOf('Deal')<0 && (x.status||'').indexOf('Cancel')<0;
+    const k = statusKey_(x.status);
+    const isQuote = k === 'quotation' || k === 'sampling';
     const age = ageDays(x.timestamp);
     const aging = isQuote && age > AGING_DAYS;
     const ageBadge = aging ? '<span class="age">🔥 '+age+'h</span>' : '';
@@ -555,7 +575,10 @@ function drawList(rows){
     tr.innerHTML = `<td>${esc(x.timestamp)||'—'}</td><td>${esc(x.customer)||'—'}</td><td>${esc(x.product)||'—'}</td>
       <td>${esc(x.kategori)||'—'}</td><td>${jenisTag(x.jenisInquiry)}</td><td>${esc(x.tanggalAcara)||'—'}</td><td>${esc(x.referral)||'—'}</td>
       <td class="num">${fmtRp(x.nominal)}</td><td>${esc(x.contactVia)||'—'}</td>
-      <td>${statusPill(x.status||'')}${ageBadge}</td><td>${esc(x.salesPic)||'—'}</td>
+      <td>${statusPill(x.status||'')}${ageBadge}</td>
+      <td>${esc(x.tglQuotation)||'—'}</td><td>${esc(x.tglSampling)||'—'}</td>
+      <td>${esc(x.tglDeal)||'—'}</td><td>${esc(x.tglCancel)||'—'}</td>
+      <td>${esc(x.salesPic)||'—'}</td>
       <td><button class="iconbtn" data-edit="${i}">✎ Edit</button></td>`;
     tb.appendChild(tr);
   });
@@ -574,7 +597,10 @@ $('btnExcel').onclick = ()=>{
     Tanggal: x.timestamp, Customer: x.customer, Produk: x.product, 'Kategori Produk': x.kategori,
     'Jenis Inquiry': x.jenisInquiry, Deadline: x.tanggalAcara, Referral: x.referral,
     'Est. Nominal': x.nominal, 'Contact Via': x.contactVia, 'Username/HP': x.contact,
-    Status: x.status, 'Sales PIC': x.salesPic, Notes: x.notes, 'Alasan Cancel': x.alasanCancel
+    Status: x.status,
+    'Tgl Quotation': x.tglQuotation, 'Tgl Sampling': x.tglSampling,
+    'Tgl Deal': x.tglDeal, 'Tgl Cancel': x.tglCancel,
+    'Sales PIC': x.salesPic, Notes: x.notes, 'Alasan Cancel': x.alasanCancel
   }));
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
@@ -600,19 +626,19 @@ function switchTab(which){
 let customers = [];
 async function loadCustomers(){
   const tb = $('custTable').querySelector('tbody');
-  tb.innerHTML = '<tr><td colspan="13" class="muted-empty">Memuat…</td></tr>';
+  tb.innerHTML = '<tr><td colspan="14" class="muted-empty">Memuat…</td></tr>';
   try{
     const url = APPS_SCRIPT_URL + '?action=getCustomers&brand=' + encodeURIComponent(auth.brand) + '&password=' + encodeURIComponent(auth.password);
     const res = await fetch(url);
     const data = await res.json();
-    if(!data.success){ tb.innerHTML = '<tr><td colspan="13" class="muted-empty">'+esc(data.error||'Gagal memuat')+'</td></tr>'; return; }
+    if(!data.success){ tb.innerHTML = '<tr><td colspan="14" class="muted-empty">'+esc(data.error||'Gagal memuat')+'</td></tr>'; return; }
     customers = data.customers || [];
     fillSelect('cVia',   customers.map(c=>c.contactVia),   'Semua Via');
     fillSelect('cJenis', customers.map(c=>c.jenisInquiry), 'Semua Jenis');
     fillSelect('cPic',   customers.map(c=>c.salesPic),     'Semua PIC');
     drawCustomers();
   }catch(e){
-    tb.innerHTML = '<tr><td colspan="13" class="muted-empty">Gagal terhubung ke server.</td></tr>';
+    tb.innerHTML = '<tr><td colspan="14" class="muted-empty">Gagal terhubung ke server.</td></tr>';
   }
 }
 function drawCustomers(){
@@ -632,12 +658,12 @@ function drawCustomers(){
   else if(sort==='inquiry') rows.sort((a,b)=>(b.count||0)-(a.count||0));
   else if(sort==='recent')  rows.sort((a,b)=>String(b.lastSeen||'').localeCompare(String(a.lastSeen||'')));
   if(!rows.length){
-    tb.innerHTML = '<tr><td colspan="13" class="muted-empty">Tidak ada customer yang cocok.</td></tr>'; return;
+    tb.innerHTML = '<tr><td colspan="14" class="muted-empty">Tidak ada customer yang cocok.</td></tr>'; return;
   }
   rows.forEach(c=>{
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${esc(c.customer)||'—'}</td><td>${esc(c.contact)||'—'}</td><td>${esc(c.contactVia)||'—'}</td>
-      <td>${jenisTag(c.jenisInquiry)}</td><td class="num">${c.count||0}</td><td class="num">${c.quoteCount||0}</td><td class="num">${c.dealCount||0}</td>
+      <td>${jenisTag(c.jenisInquiry)}</td><td class="num">${c.count||0}</td><td class="num">${c.quoteCount||0}</td><td class="num">${c.samplingCount||0}</td><td class="num">${c.dealCount||0}</td>
       <td class="num">${fmtRp(c.totalQuote)}</td><td class="num">${fmtRp(c.totalDeal)}</td><td>${statusPill(c.lastStatus||'')}</td>
       <td>${esc(c.lastEvent)||'—'}</td><td>${esc(c.salesPic)||'—'}</td><td>${esc(c.lastSeen)||'—'}</td>`;
     tb.appendChild(tr);
@@ -647,6 +673,16 @@ $('cSearch').oninput = drawCustomers;
 ['cStatus','cVia','cJenis','cPic','cSort'].forEach(id=>{ $(id).onchange = drawCustomers; });
 
 /* ====== EDIT ====== */
+// Timeline read-only: tanggal tiap tahap, terisi otomatis oleh sistem & statis.
+function timelineHtml(x){
+  const rows = [
+    ['quotation', x.tglQuotation], ['sampling', x.tglSampling],
+    ['deal', x.tglDeal],           ['cancel', x.tglCancel],
+  ].filter(r => r[1]);
+  if(!rows.length) return 'Belum ada tanggal tercatat — akan terisi otomatis saat status disimpan.';
+  return rows.map(r => ST_LABEL[r[0]] + ' · <b>' + esc(r[1]) + '</b>').join(' &nbsp;→&nbsp; ') +
+         '<br><span class="muted">Tanggal diisi sistem saat status pertama kali masuk tahap tsb — tidak bisa diubah.</span>';
+}
 function openEdit(i){
   const x = currentList[i]; if(!x) return;
   $('eRow').value      = x.row;
@@ -655,9 +691,8 @@ function openEdit(i){
   $('eJenis').value    = x.jenisInquiry || '';
   $('eTanggal').value  = x.tanggalAcara || '';
   $('eNominal').value  = x.nominal || '';
-  $('eStatus').value   = x.status && x.status.indexOf('Deal')>=0 ? '✅ Deal'
-                       : x.status && x.status.indexOf('Cancel')>=0 ? '❌ Cancel'
-                       : '📝 Quotation';
+  $('eStatus').value   = ST_LABEL[statusKey_(x.status)];
+  $('eTimeline').innerHTML = timelineHtml(x);
   $('eContactVia').value = x.contactVia || 'Instagram';
   $('eContact').value  = x.contact || '';
   $('eReferral').value = x.referral || '';
@@ -986,10 +1021,12 @@ function lapAssemble(){
   const ag=((brandAgenda&&brandAgenda.detail)||[]).filter(x=>x.bulan===lapMonth);
   const agDone=ag.filter(x=>agStatusLabel(x.status)==='Done').length, agProg=ag.filter(x=>agStatusLabel(x.status)==='In Progress').length;
   const inq=currentList||[];
-  const inqQ=inq.filter(x=>(x.status||'').indexOf('Deal')<0&&(x.status||'').indexOf('Cancel')<0);
-  const inqW=inq.filter(x=>(x.status||'').indexOf('Deal')>=0);
-  const inqL=inq.filter(x=>(x.status||'').indexOf('Cancel')>=0);
-  return {yr,mi,prevM,nextM,bCur,bNext,so,sp,ag,agDone,agProg,inq,inqQ,inqW,inqL,sumK};
+  // inqQ = pipeline berjalan (quotation + sampling); inqS = sampling saja
+  const inqQ=inq.filter(x=>['quotation','sampling'].indexOf(statusKey_(x.status))>=0);
+  const inqS=inq.filter(x=>statusKey_(x.status)==='sampling');
+  const inqW=inq.filter(x=>statusKey_(x.status)==='deal');
+  const inqL=inq.filter(x=>statusKey_(x.status)==='cancel');
+  return {yr,mi,prevM,nextM,bCur,bNext,so,sp,ag,agDone,agProg,inq,inqQ,inqS,inqW,inqL,sumK};
 }
 function renderBrandLaporan(){
   const box=$('pane-laporan'), R=lapAssemble(), N=lapNotesBrand||{};
@@ -1028,7 +1065,8 @@ function renderBrandLaporan(){
 
     <div class="section-title">📋 Progres Inquiry</div>
     <div class="kpis">
-      <div class="kpi wait"><h3>Berjalan (Quotation)</h3><div class="v num">${R.inqQ.length}</div></div>
+      <div class="kpi wait"><h3>Berjalan (Quotation)</h3><div class="v num">${R.inqQ.length - R.inqS.length}</div></div>
+      <div class="kpi sampling"><h3>On going sampling</h3><div class="v num">${R.inqS.length}</div></div>
       <div class="kpi deal"><h3>Masuk (Deal)</h3><div class="v num">${R.inqW.length}</div></div>
       <div class="kpi cancel"><h3>Gagal (Cancel)</h3><div class="v num">${R.inqL.length}</div></div>
     </div>
@@ -1066,7 +1104,8 @@ function exportBrandLaporanExcel(){
     {Bagian:'Budget Estimasi',Nilai:R.bCur.est},{Bagian:'Proyeksi',Nilai:R.bCur.proj},{Bagian:'Aktual',Nilai:R.bCur.act},
     {Bagian:'Reach '+lapMonth,Nilai:R.so.reach},{Bagian:'Reach '+R.prevM,Nilai:R.sp.reach},{Bagian:'Avg ER '+lapMonth,Nilai:R.so.er.toFixed(2)+'%'},
     {Bagian:'Agenda Total',Nilai:R.ag.length},{Bagian:'Agenda Done',Nilai:R.agDone},
-    {Bagian:'Inquiry Berjalan',Nilai:R.inqQ.length},{Bagian:'Inquiry Deal',Nilai:R.inqW.length},{Bagian:'Inquiry Cancel',Nilai:R.inqL.length},
+    {Bagian:'Inquiry Berjalan (Quotation)',Nilai:R.inqQ.length-R.inqS.length},{Bagian:'Inquiry On going sampling',Nilai:R.inqS.length},
+    {Bagian:'Inquiry Deal',Nilai:R.inqW.length},{Bagian:'Inquiry Cancel',Nilai:R.inqL.length},
     {Bagian:'Wins',Nilai:$('lWins').value},{Bagian:'Losses',Nilai:$('lLosses').value},{Bagian:'Opportunity',Nilai:$('lOpp').value},{Bagian:'Calon Problem',Nilai:$('lProb').value},
   ]),'Laporan');
   XLSX.writeFile(wb,`Laporan_${auth.brand}_${lapMonth}_${R.yr}.xlsx`);
