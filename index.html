@@ -888,6 +888,7 @@ async function unlockFinance(){
   }catch(e){ err.textContent='Gagal terhubung ke server.'; err.className='err show'; }
   finally{ btn.disabled=false; btn.textContent='Buka Finance →'; }
 }
+let estOpenBN=false; // rincian Budget Estimasi per card (Brand Needs)
 function renderBrandFinance(){
   const box=$('pane-finance'), rows=brandFin.rows||[], detail=brandFin.detail||[];
   const sum=(a,k)=>a.reduce((s,x)=>s+(x[k]||0),0);
@@ -900,18 +901,29 @@ function renderBrandFinance(){
   const dRows=detail.slice().sort((a,b)=>AG_MON.indexOf(a.month)-AG_MON.indexOf(b.month)).map(d=>
     `<tr><td>${esc(d.month)}</td><td>${esc(d.card)}</td><td class="muted">${esc(d.subtask)}</td><td>${esc(d.deadline)||'—'}</td><td class="num">${fmtRp(d.nominal)}</td></tr>`
   ).join('')||'<tr><td colspan="5" class="muted-empty" style="text-align:center;padding:16px">Belum ada rincian.</td></tr>';
+  const estDet=(brandFin.estDetail||[]).slice().sort((a,b)=>(b.est||0)-(a.est||0));
+  const estDetTotal=estDet.reduce((s,d)=>s+(d.est||0),0);
+  const eRows=estDet.map(d=>
+    `<tr><td>${esc(d.card)||'—'}</td><td><b>${esc(d.month)||'—'}</b></td><td class="muted">${esc(d.list)||'—'}</td><td class="num">${fmtRp(d.est)}</td></tr>`
+  ).join('')||'<tr><td colspan="4" class="muted-empty" style="text-align:center;padding:16px">Belum ada card dengan Estimated Budget.</td></tr>';
+  const estPanel=!estOpenBN?'':`
+    <div class="section-title">🔎 Rincian Budget Estimasi — dari card mana saja</div>
+    <div class="note" style="margin:-4px 0 8px">Diambil dari <b>Estimated Budget:</b> di deskripsi tiap card Trello, dihitung di bulan card berakhir.</div>
+    <div class="tablewrap"><table><thead><tr><th>Card / Agenda</th><th>Bulan</th><th>List</th><th>Estimasi</th></tr></thead><tbody>${eRows}<tr><td colspan="3" style="text-align:right"><b>Total</b></td><td class="num"><b>${fmtRp(estDetTotal)}</b></td></tr></tbody></table></div>`;
   box.innerHTML=`
     <div class="section-title">💰 Finance — ${esc(auth.brand)} · ${brandFin.year}</div>
     <div class="note" style="margin:-4px 0 10px"><b>Estimasi</b> = patokan awal (tetap) · <b>Proyeksi</b> = rencana terkini dari checklist (bisa berubah) · <b>Aktual</b> = realisasi. Estimasi dihitung di bulan card berakhir.</div>
     <div class="kpis">
-      <div class="kpi"><h3>Budget Estimasi</h3><div class="v num">${fmtRp(est)}</div></div>
+      <div class="kpi" id="estCardBN" style="cursor:pointer" title="Klik untuk lihat rincian per card"><h3>Budget Estimasi ${estOpenBN?'▲':'▼'}</h3><div class="v num">${fmtRp(est)}</div><div class="note" style="margin:2px 0 0">klik lihat rincian</div></div>
       <div class="kpi wait"><h3>Proyeksi (Checklist)</h3><div class="v num">${fmtRp(proj)}</div></div>
       <div class="kpi"><h3>Budget Aktual</h3><div class="v num">${fmtRp(act)}</div></div>
     </div>
+    ${estPanel}
     <div class="section-title">📅 Per Bulan</div>
     <div class="tablewrap"><table><thead><tr><th>Bulan</th><th>Budget Est.</th><th>Proyeksi</th><th>Aktual</th></tr></thead><tbody>${mRows}</tbody></table></div>
     <div class="section-title">🧾 Rincian Pengeluaran</div>
     <div class="tablewrap"><table><thead><tr><th>Bulan</th><th>Task / Card</th><th>Checklist</th><th>Tanggal</th><th>Nominal</th></tr></thead><tbody>${dRows}</tbody></table></div>`;
+  $('estCardBN').onclick=()=>{ estOpenBN=!estOpenBN; renderBrandFinance(); };
 }
 
 /* ---- MARKETING ---- */
