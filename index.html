@@ -125,6 +125,30 @@ tbody tr.aging:hover{background:#f3d5d5}
 .lap-sub{font-size:11px;color:var(--text3);margin-top:3px;font-family:'DM Mono',monospace}
 tr.lap-od td{background:#fdf0f0}
 tr.lap-soon td{background:#fffaeb}
+/* Finance: kartu bisa-klik, bar kelengkapan, ikon penjelasan */
+.kpi.klik{cursor:pointer;transition:border-color .12s,box-shadow .12s}
+.kpi.klik:hover{border-color:var(--gold)}
+.kpi.on{border-color:var(--gold);background:var(--gold-bg)}
+.kpi .lihat{font-size:10.5px;color:var(--text3);margin-top:5px}
+.kpi.on .lihat{color:var(--amber);font-weight:600}
+.vsub{font-size:11.5px;margin-top:3px;line-height:1.4}
+.bar{height:5px;border-radius:3px;background:var(--cream2);margin-top:6px;overflow:hidden}
+.bar>i{display:block;height:100%;border-radius:3px;background:var(--green4)}
+.bar>i.over{background:var(--red)}.bar>i.low{background:var(--amber)}
+.statrow{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--cream2);color:var(--text2);white-space:nowrap}
+.info{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;
+  background:var(--cream3);color:var(--text2);font-size:9px;font-weight:700;font-style:normal;cursor:help;
+  margin-left:4px;position:relative;vertical-align:middle}
+.info:hover,.info:focus{background:var(--gold);color:#fff;outline:none}
+.info .tip{visibility:hidden;opacity:0;position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);
+  width:230px;max-width:calc(100vw - 16px);background:var(--green);color:#fff;font-size:11px;font-weight:400;line-height:1.5;
+  padding:8px 10px;border-radius:7px;text-align:left;z-index:40;box-shadow:0 5px 18px rgba(0,0,0,.22);transition:opacity .12s;pointer-events:none}
+.info .tip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--green)}
+.info .tip.ki{left:auto;right:0;transform:none}.info .tip.ki::after{left:auto;right:3px;transform:none}
+.info .tip.ka{left:0;right:auto;transform:none}.info .tip.ka::after{left:3px;transform:none}
+.info:hover .tip,.info:focus .tip{visibility:visible;opacity:1}
+.info .tip b{color:var(--gold2)}
 .tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;display:inline-block;background:var(--cream2);color:var(--text2)}
 .tag.wedding{background:#fbe4ec;color:#a8326a}
 .tag.corporate{background:var(--blue-bg);color:var(--blue)}
@@ -1349,42 +1373,149 @@ async function unlockFinance(){
   }catch(e){ err.textContent='Gagal terhubung ke server.'; err.className='err show'; }
   finally{ btn.disabled=false; btn.textContent='Buka Finance →'; }
 }
-let estOpenBN=false; // rincian Budget Estimasi per card (Brand Needs)
+let finOpenBN='';       // panel rincian terbuka: '' | 'est' | 'proj'
+let estModeBN='akhir';  // 'akhir' (bulan card berakhir) | 'sebar' (ikut sebaran checklist)
+
+// Estimasi per bulan sesuai cara hitung terpilih (sama logika dgn dashboard BOD).
+function hitungEstMapBN(mode){
+  const map={}; const add=(m,v)=>{ if(!m) return; map[m]=(map[m]||0)+v; };
+  if(mode!=='sebar'){ (brandFin.rows||[]).forEach(r=>add(r.month, r.est||0)); return map; }
+  const itemsByCard={};
+  (brandFin.detail||[]).forEach(d=>{ (itemsByCard[d.card]=itemsByCard[d.card]||[]).push(d); });
+  (brandFin.estDetail||[]).forEach(e=>{
+    const items=itemsByCard[e.card]||[];
+    if(!items.length){ add(e.month, e.est||0); return; }
+    const perBulan={}; let total=0;
+    items.forEach(it=>{ if(!it.month) return; perBulan[it.month]=(perBulan[it.month]||0)+(it.nominal||0); total+=(it.nominal||0); });
+    const bulan=Object.keys(perBulan);
+    if(!bulan.length){ add(e.month, e.est||0); return; }
+    if(total>0) bulan.forEach(m=>add(m,(e.est||0)*perBulan[m]/total));
+    else        bulan.forEach(m=>add(m,(e.est||0)/bulan.length));
+  });
+  return map;
+}
+
 function renderBrandFinance(){
   const box=$('pane-finance'), rows=brandFin.rows||[], detail=brandFin.detail||[];
   const sum=(a,k)=>a.reduce((s,x)=>s+(x[k]||0),0);
-  const est=sum(rows,'est'),proj=sum(rows,'proj'),act=sum(rows,'act');
-  const byMonth={}; rows.forEach(r=>{(byMonth[r.month]=byMonth[r.month]||[]).push(r);});
-  const mRows=Object.keys(byMonth).sort((a,b)=>AG_MON.indexOf(a)-AG_MON.indexOf(b)).map(m=>{
-    const mr=byMonth[m],e=sum(mr,'est'),p=sum(mr,'proj'),a=sum(mr,'act');
-    return `<tr><td><b>${m}</b></td><td class="num">${fmtRp(e)}</td><td class="num">${fmtRp(p)}</td><td class="num">${fmtRp(a)}</td></tr>`;
+  const proj=sum(rows,'proj'),act=sum(rows,'act');
+  const estMap=hitungEstMapBN(estModeBN);
+  const est=Math.round(Object.keys(estMap).reduce((s,m)=>s+estMap[m],0));
+  const dirinciPct=est?Math.round(proj/est*100):0;
+
+  const infoIcon=t=>`<span class="info" tabindex="0">i<span class="tip">${t}</span></span>`;
+  const TIP={
+    est:'Angka <b>besar/patokan</b> dari <b>Estimated Budget:</b> di deskripsi card Trello. Ini yang nanti <b>dipecah</b> jadi item checklist. Klik untuk lihat dari card mana saja.',
+    proj:'Hasil <b>memecah estimasi</b> jadi item konkret — nominal <b>(Rp ...)</b> di checklist. Idealnya jumlahnya <b>sama dgn Estimasi</b>. Klik untuk rincian per card.',
+    mode:'<b>Bulan card berakhir</b>: seluruh estimasi card ditaruh di bulan due-date-nya — mudah dilacak, tapi tidak sebanding dgn Proyeksi.<br><br><b>Ikut sebaran checklist</b>: estimasi dibagi ke bulan item checklist-nya, jadi sebanding. Total setahun sama.',
+  };
+
+  // Per bulan (Est ikut mode terpilih)
+  const bulanSet={}; rows.forEach(r=>bulanSet[r.month]=1); Object.keys(estMap).forEach(m=>bulanSet[m]=1);
+  const projByM={},actByM={}; rows.forEach(r=>{ projByM[r.month]=(projByM[r.month]||0)+(r.proj||0); actByM[r.month]=(actByM[r.month]||0)+(r.act||0); });
+  const mRows=Object.keys(bulanSet).sort((a,b)=>AG_MON.indexOf(a)-AG_MON.indexOf(b)).map(m=>{
+    const e=Math.round(estMap[m]||0),p=projByM[m]||0,a=actByM[m]||0;
+    return `<tr><td><b>${m}</b></td><td class="num">${e?fmtRp(e):'<span class="lap-na">—</span>'}</td><td class="num">${p?fmtRp(p):'<span class="lap-na">—</span>'}</td><td class="num">${a?fmtRp(a):'<span class="lap-na">belum terupdate</span>'}</td></tr>`;
   }).join('')||'<tr><td colspan="4" class="muted-empty" style="text-align:center;padding:16px">Belum ada data.</td></tr>';
+
   const dRows=detail.slice().sort((a,b)=>AG_MON.indexOf(a.month)-AG_MON.indexOf(b.month)).map(d=>
     `<tr><td>${esc(d.month)}</td><td>${esc(d.card)}</td><td class="muted">${esc(d.subtask)}</td><td>${esc(d.deadline)||'—'}</td><td class="num">${fmtRp(d.nominal)}</td></tr>`
   ).join('')||'<tr><td colspan="5" class="muted-empty" style="text-align:center;padding:16px">Belum ada rincian.</td></tr>';
+
+  // Panel rincian Estimasi (per card)
   const estDet=(brandFin.estDetail||[]).slice().sort((a,b)=>(b.est||0)-(a.est||0));
   const estDetTotal=estDet.reduce((s,d)=>s+(d.est||0),0);
   const eRows=estDet.map(d=>
     `<tr><td>${esc(d.card)||'—'}</td><td><b>${esc(d.month)||'—'}</b></td><td class="muted">${esc(d.list)||'—'}</td><td class="num">${fmtRp(d.est)}</td></tr>`
   ).join('')||'<tr><td colspan="4" class="muted-empty" style="text-align:center;padding:16px">Belum ada card dengan Estimated Budget.</td></tr>';
-  const estPanel=!estOpenBN?'':`
+  const estPanel=finOpenBN!=='est'?'':`
     <div class="section-title">🔎 Rincian Budget Estimasi — dari card mana saja</div>
-    <div class="note" style="margin:-4px 0 8px">Diambil dari <b>Estimated Budget:</b> di deskripsi tiap card Trello, dihitung di bulan card berakhir.</div>
+    <div class="note" style="margin:-4px 0 8px">Diambil dari <b>Estimated Budget:</b> di deskripsi tiap card Trello.</div>
     <div class="tablewrap"><table><thead><tr><th>Card / Agenda</th><th>Bulan</th><th>List</th><th>Estimasi</th></tr></thead><tbody>${eRows}<tr><td colspan="3" style="text-align:right"><b>Total</b></td><td class="num"><b>${fmtRp(estDetTotal)}</b></td></tr></tbody></table></div>`;
+
+  // Panel rincian Proyeksi (per card)
+  const pMap={}; detail.forEach(d=>{ const k=d.card+'|'+d.month;
+    if(!pMap[k]) pMap[k]={card:d.card,month:d.month,n:0,total:0}; pMap[k].n++; pMap[k].total+=(d.nominal||0); });
+  const pArr=Object.keys(pMap).map(k=>pMap[k]).sort((a,b)=>b.total-a.total);
+  const pRows=pArr.map(p=>`<tr><td>${esc(p.card)||'—'}</td><td><b>${esc(p.month)||'—'}</b></td><td class="num">${p.n}</td><td class="num">${fmtRp(p.total)}</td></tr>`
+  ).join('')||'<tr><td colspan="4" class="muted-empty" style="text-align:center;padding:16px">Belum ada nominal di checklist.</td></tr>';
+  const projPanel=finOpenBN!=='proj'?'':`
+    <div class="section-title">🔎 Rincian Proyeksi — dari card mana saja</div>
+    <div class="note" style="margin:-4px 0 8px">Dijumlahkan dari nominal <b>(Rp ...)</b> di item checklist. Rincian per item ada di tabel <b>Rincian Pengeluaran</b> di bawah.</div>
+    <div class="tablewrap"><table><thead><tr><th>Card / Agenda</th><th>Bulan</th><th>Jml Item</th><th>Proyeksi</th></tr></thead><tbody>${pRows}<tr><td colspan="3" style="text-align:right"><b>Total</b></td><td class="num"><b>${fmtRp(pArr.reduce((s,p)=>s+p.total,0))}</b></td></tr></tbody></table></div>`;
+
+  // ── Pecahan Estimasi per card ──
+  const pecahMap={}; const kunci=(c)=>c;
+  estDet.forEach(d=>{ const k=kunci(d.card); if(!pecahMap[k]) pecahMap[k]={card:d.card,month:d.month,est:0,proj:0,n:0}; pecahMap[k].est+=d.est||0; });
+  detail.forEach(d=>{ const k=kunci(d.card); if(!pecahMap[k]) pecahMap[k]={card:d.card,month:d.month,est:0,proj:0,n:0}; pecahMap[k].proj+=d.nominal||0; pecahMap[k].n++; });
+  const statusPecah=p=>{ const sisa=p.est-p.proj, tol=Math.max(1000,p.est*0.005);
+    if(!p.est&&p.proj)  return {k:'noest',   urut:1,label:'Estimasi belum diisi',warna:'var(--amber)'};
+    if(!p.est&&!p.proj) return {k:'kosong',  urut:4,label:'Belum ada angka',      warna:'var(--text3)'};
+    if(!p.proj)         return {k:'belum',   urut:2,label:'Belum dirinci',        warna:'var(--red)'};
+    if(sisa>tol)        return {k:'sebagian',urut:3,label:'Baru sebagian',        warna:'var(--amber)'};
+    if(sisa<-tol)       return {k:'lebih',   urut:0,label:'Melebihi estimasi',    warna:'var(--red)'};
+    return                     {k:'pas',     urut:5,label:'Terpecah pas',         warna:'var(--green4)'}; };
+  const pecahArr=Object.keys(pecahMap).map(k=>pecahMap[k]); pecahArr.forEach(p=>p.st=statusPecah(p));
+  pecahArr.sort((a,b)=>a.st.urut-b.st.urut||(b.est||b.proj)-(a.est||a.proj));
+  const nPecah={}; pecahArr.forEach(p=>nPecah[p.st.k]=(nPecah[p.st.k]||0)+1);
+  const pecahRows=pecahArr.map(p=>{
+    const sisa=p.est-p.proj, pct=p.est?Math.round(p.proj/p.est*100):(p.proj?100:0), cls=pct>100?'over':(pct<50?'low':'');
+    const sisaTxt=!p.est?'<span class="lap-na">—</span>':sisa>0?`<span style="color:var(--amber)">${fmtRp(sisa)}</span>`:sisa<0?`<span style="color:var(--red)">lebih ${fmtRp(-sisa)}</span>`:'<span style="color:var(--green4)">—</span>';
+    return `<tr><td>${esc(p.card)||'—'}</td><td><b>${esc(p.month)||'—'}</b></td>
+      <td class="num">${p.est?fmtRp(p.est):'<span class="lap-na">belum diisi</span>'}</td>
+      <td class="num">${p.proj?fmtRp(p.proj):'<span class="lap-na">belum dirinci</span>'}</td>
+      <td class="num">${sisaTxt}</td>
+      <td style="min-width:100px"><div class="bar" style="margin-top:0"><i class="${cls}" style="width:${Math.min(pct,100)}%"></i></div><div class="vsub muted" style="margin-top:2px">${p.est?pct+'%':'—'} · ${p.n} item</div></td>
+      <td><span class="pill" style="background:transparent;border:1px solid ${p.st.warna};color:${p.st.warna}">${p.st.label}</span></td></tr>`;
+  }).join('')||'<tr><td colspan="7" class="muted-empty" style="text-align:center;padding:16px">Belum ada card dengan estimasi maupun rincian.</td></tr>';
+  const chip=(k,label,warna)=> nPecah[k]?`<span class="chip" style="background:transparent;border:1px solid ${warna};color:${warna}">${label}: ${nPecah[k]}</span>`:'';
+
+  const modeNote = estModeBN==='akhir'
+    ? `<div class="note" style="margin:-4px 0 8px;background:var(--gold-bg);border:1px solid #e8d49a;border-radius:8px;padding:8px 10px;color:var(--text2)">⚠️ <b>Selisih Est vs Proyeksi per bulan belum sebanding</b> — Estimasi dihitung penuh di bulan card berakhir, Proyeksi tersebar per item. Ganti ke <b>“Ikut sebaran checklist”</b> di atas, atau lihat perbandingan per card di tabel <b>🧩 Pecahan Estimasi</b>.</div>`
+    : `<div class="note" style="margin:-4px 0 8px">Estimasi dibagi ke bulan item checklist-nya, jadi <b>sebanding</b> dengan Proyeksi. Total setahun tetap sama.</div>`;
+
   box.innerHTML=`
     <div class="section-title">💰 Finance — ${esc(auth.brand)} · ${brandFin.year}</div>
-    <div class="note" style="margin:-4px 0 10px"><b>Estimasi</b> = patokan awal (tetap) · <b>Proyeksi</b> = rencana terkini dari checklist (bisa berubah) · <b>Aktual</b> = realisasi. Estimasi dihitung di bulan card berakhir.</div>
-    <div class="kpis">
-      <div class="kpi" id="estCardBN" style="cursor:pointer" title="Klik untuk lihat rincian per card"><h3>Budget Estimasi ${estOpenBN?'▲':'▼'}</h3><div class="v num">${fmtRp(est)}</div><div class="note" style="margin:2px 0 0">klik lihat rincian</div></div>
-      <div class="kpi wait"><h3>Proyeksi (Checklist)</h3><div class="v num">${fmtRp(proj)}</div></div>
-      <div class="kpi"><h3>Budget Aktual</h3><div class="v num">${fmtRp(act)}</div></div>
+    <div class="note" style="margin:-4px 0 8px">Arahkan ke ikon <span class="info" tabindex="0">i</span> di tiap kartu untuk tahu arti &amp; sumbernya · klik kartu untuk rinciannya.</div>
+    <div style="display:flex;align-items:center;gap:8px;margin:0 0 10px;flex-wrap:wrap">
+      <span class="note" style="margin:0">Estimasi per bulan ${infoIcon(TIP.mode)}</span>
+      <select id="estModeBN" style="font-size:13px;padding:5px 8px;border:1.5px solid var(--cream2);border-radius:8px;background:var(--white)">
+        <option value="akhir"${estModeBN==='akhir'?' selected':''}>Bulan card berakhir</option>
+        <option value="sebar"${estModeBN==='sebar'?' selected':''}>Ikut sebaran checklist</option>
+      </select>
     </div>
-    ${estPanel}
+    <div class="kpis">
+      <div class="kpi klik${finOpenBN==='est'?' on':''}" id="estCardBN"><h3>Budget Estimasi ${infoIcon(TIP.est)}</h3><div class="v num">${est?fmtRp(est):'<span class="lap-na">belum diisi</span>'}</div><div class="lihat">${finOpenBN==='est'?'▲ tutup rincian':'▼ klik lihat rincian'}</div></div>
+      <div class="kpi klik wait${finOpenBN==='proj'?' on':''}" id="projCardBN"><h3>Proyeksi (pecahan estimasi) ${infoIcon(TIP.proj)}</h3><div class="v num">${proj?fmtRp(proj):'<span class="lap-na">belum ada</span>'}</div>${est?`<div class="bar"><i class="${dirinciPct>100?'over':(dirinciPct<50?'low':'')}" style="width:${Math.min(dirinciPct,100)}%"></i></div><div class="vsub muted">${dirinciPct}% dari estimasi sudah dirinci${dirinciPct<100?` · sisa ${fmtRp(Math.max(0,est-proj))}`:''}</div>`:''}<div class="lihat">${finOpenBN==='proj'?'▲ tutup rincian':'▼ klik lihat rincian'}</div></div>
+      <div class="kpi"><h3>Budget Aktual</h3><div class="v num">${act?fmtRp(act):'<span class="lap-na">belum terupdate</span>'}</div></div>
+    </div>
+    ${estPanel}${projPanel}
+    <div class="section-title">🧩 Pecahan Estimasi — sudah dirinci berapa?</div>
+    <div class="note" style="margin:-4px 0 8px"><b>Proyeksi adalah pecahan dari Budget Estimasi.</b> Estimasi ditulis sekali di deskripsi card, lalu dipecah jadi item checklist bernominal <code>(Rp ...)</code>. Kalau semua sudah dirinci, jumlah pecahan = estimasi.</div>
+    <div class="statrow" style="margin-bottom:8px">
+      ${chip('lebih','⚠ Melebihi estimasi','var(--red)')}${chip('belum','● Belum dirinci','var(--red)')}${chip('noest','◐ Estimasi belum diisi','var(--amber)')}${chip('sebagian','◐ Baru sebagian','var(--amber)')}${chip('pas','✓ Terpecah pas','var(--green4)')}${chip('kosong','○ Belum ada angka','var(--text3)')}
+    </div>
+    <div class="tablewrap"><table><thead><tr><th>Card / Agenda</th><th>Bulan</th><th>Estimasi</th><th>Sudah dirinci</th><th>Sisa</th><th>Kelengkapan</th><th>Status</th></tr></thead><tbody>${pecahRows}</tbody></table></div>
     <div class="section-title">📅 Per Bulan</div>
+    ${modeNote}
     <div class="tablewrap"><table><thead><tr><th>Bulan</th><th>Budget Est.</th><th>Proyeksi</th><th>Aktual</th></tr></thead><tbody>${mRows}</tbody></table></div>
     <div class="section-title">🧾 Rincian Pengeluaran</div>
     <div class="tablewrap"><table><thead><tr><th>Bulan</th><th>Task / Card</th><th>Checklist</th><th>Tanggal</th><th>Nominal</th></tr></thead><tbody>${dRows}</tbody></table></div>`;
-  $('estCardBN').onclick=()=>{ estOpenBN=!estOpenBN; renderBrandFinance(); };
+  $('estCardBN').onclick=()=>{ finOpenBN=finOpenBN==='est'?'':'est'; renderBrandFinance(); };
+  $('projCardBN').onclick=()=>{ finOpenBN=finOpenBN==='proj'?'':'proj'; renderBrandFinance(); };
+  $('estModeBN').onchange=e=>{ estModeBN=e.target.value; renderBrandFinance(); };
+  if(typeof posisiTooltipBN==='function') posisiTooltipBN(box);
+}
+
+// Balik arah tooltip ⓘ kalau mepet tepi layar (cegah scroll samping)
+function posisiTooltipBN(scope){
+  const vw=document.documentElement.clientWidth||window.innerWidth;
+  (scope||document).querySelectorAll('.info .tip').forEach(t=>{
+    t.classList.remove('ki','ka');
+    const ic=t.parentElement.getBoundingClientRect(), w=t.offsetWidth||230;
+    if(ic.left+ic.width/2+w/2>vw-8) t.classList.add('ki');
+    else if(ic.left+ic.width/2-w/2<8) t.classList.add('ka');
+  });
 }
 
 /* ---- MARKETING ---- */
