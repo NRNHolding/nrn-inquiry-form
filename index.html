@@ -247,6 +247,11 @@ table thead th{cursor:pointer;user-select:none}.sort-ind{opacity:.55;font-size:.
       <div class="kpi nominal"><h3>💰 Nominal Deal</h3><div class="v num" id="sNominal">Rp 0</div></div>
     </div>
 
+    <!-- Target vs tercapai -->
+    <div class="section-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">🎯 Target vs Tercapai
+      <select id="tgtMonthSel" style="font-size:12px;padding:4px 8px;border:1.5px solid var(--cream2);border-radius:8px;background:var(--white)"></select></div>
+    <div id="tgtBox"></div>
+
     <!-- Perbandingan bulan ini vs bulan lalu -->
     <div class="section-title">📆 Bulan Ini vs Bulan Lalu</div>
     <div class="kpis" id="momBox"></div>
@@ -493,7 +498,8 @@ async function login(){
     $('brandBadge').classList.add('show');
     $('badgeBrand').textContent = brand;
     setJenisOptions(brand);
-    renderSummary(data.summary); renderList(data.inquiries);
+    salesTargets = data.targets || [];
+    renderSummary(data.summary); renderList(data.inquiries); renderBrandTarget();
   }catch(e){
     err.textContent = 'Gagal terhubung ke server. Cek koneksi / URL Web App.';
     err.className = 'err show';
@@ -513,6 +519,31 @@ $('logoutBtn').onclick = ()=>{
   brandAgenda = brandFin = brandMkt = null; calYear = undefined;
   switchPane('inquiry');
 };
+
+/* ====== TARGET vs TERCAPAI (brand) ====== */
+let salesTargets=[], tgtMonth=null; // tgtMonth di-set lazily (AG_MON didefinisikan belakangan)
+function renderBrandTarget(){
+  const box=$('tgtBox'), sel=$('tgtMonthSel'); if(!box) return;
+  if(tgtMonth===null) tgtMonth=AG_MON[new Date().getMonth()];
+  if(sel && !sel.options.length){ sel.innerHTML=AG_MON.map(m=>`<option ${m===tgtMonth?'selected':''}>${m}</option>`).join(''); sel.onchange=e=>{tgtMonth=e.target.value;renderBrandTarget();}; }
+  const mi=AG_MON.indexOf(tgtMonth);
+  const t=(salesTargets||[]).find(x=>AG_MON.indexOf(x.month)===mi) || {nominal:0,deal:0};
+  // deal brand ini yg MASUK bulan terpilih (timestamp 'yyyy-MM-dd HH:mm')
+  const dealsMo=(currentList||[]).filter(x=>statusKey_(x.status)==='deal' && Number(String(x.timestamp||'').slice(5,7))===mi+1);
+  const gotNom=dealsMo.reduce((s,x)=>s+(x.nominal||0),0), gotDeal=dealsMo.length;
+  if(!t.nominal && !t.deal){ box.innerHTML='<div class="note">Belum ada target untuk '+tgtMonth+'. Minta admin isi sheet 🎯 Sales Target.</div>'; return; }
+  const barN=t.nominal?Math.min(Math.round(gotNom/t.nominal*100),100):0, barD=t.deal?Math.min(Math.round(gotDeal/t.deal*100),100):0;
+  box.innerHTML=`<div class="kpis">
+    <div class="kpi"><h3>Nilai Deal ${tgtMonth}</h3><div class="v num" style="font-size:17px">${fmtRp(gotNom)}</div>
+      <div class="note" style="margin:2px 0 0">target ${t.nominal?fmtRp(t.nominal):'—'}</div>
+      <div class="bar"><i class="${barN>=100?'':'low'}" style="width:${barN}%"></i></div>
+      <div class="vsub muted">${t.nominal?Math.round(gotNom/t.nominal*100)+'% dari target':'target belum diisi'}</div></div>
+    <div class="kpi deal"><h3>Jumlah Deal ${tgtMonth}</h3><div class="v num">${gotDeal}</div>
+      <div class="note" style="margin:2px 0 0">target ${t.deal||'—'}</div>
+      <div class="bar"><i class="${barD>=100?'':'low'}" style="width:${barD}%"></i></div>
+      <div class="vsub muted">${t.deal?Math.round(gotDeal/t.deal*100)+'% dari target':'target belum diisi'}</div></div>
+  </div>`;
+}
 
 /* ====== RENDER SUMMARY ====== */
 function renderSummary(s){
@@ -1273,7 +1304,7 @@ async function refresh(){
     const url = APPS_SCRIPT_URL + '?action=getInquiries&brand=' + encodeURIComponent(auth.brand) + '&password=' + encodeURIComponent(auth.password);
     const res = await fetch(url);
     const data = await res.json();
-    if(data.success){ renderSummary(data.summary); renderList(data.inquiries); }
+    if(data.success){ salesTargets=data.targets||salesTargets; renderSummary(data.summary); renderList(data.inquiries); renderBrandTarget(); }
     // Kalau tab customer sedang aktif, refresh juga
     if($('viewCustomer').classList.contains('show')) loadCustomers();
   }catch(e){ /* diam */ }
