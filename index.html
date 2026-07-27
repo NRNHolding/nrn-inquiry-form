@@ -1313,7 +1313,7 @@ async function refresh(){
 /* ══════════ BRAND NEEDS — PANES (Agenda / Finance / Marketing) ══════════ */
 let agendaLoaded=false, mktLoaded=false, finLoaded=false, finPw='';
 let brandAgenda=null, brandFin=null, brandMkt=null;
-let agendaViewMode='list', calYear, calMonth;
+let agendaViewMode='list', calYear, calMonth, agTlScope='month';
 const AG_MON=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
 function switchPane(pane){
@@ -1375,20 +1375,35 @@ function renderBrandAgenda(){
     if(p) p.onclick=()=>{calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderBrandAgenda();};
     if(n) n.onclick=()=>{calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderBrandAgenda();};
   }
+  if(agendaViewMode==='timeline'){
+    if($('agScMonth')) $('agScMonth').onclick=()=>{agTlScope='month';renderBrandAgenda();};
+    if($('agScYear'))  $('agScYear').onclick =()=>{agTlScope='year'; renderBrandAgenda();};
+    if($('agYrPrev'))  $('agYrPrev').onclick =()=>{calYear--;renderBrandAgenda();};
+    if($('agYrNext'))  $('agYrNext').onclick =()=>{calYear++;renderBrandAgenda();};
+  }
 }
 /* Timeline start–end: 1 baris per card, bar dari item paling awal → paling akhir.
-   Rentang diambil dari tag [DD MM] checklist (field deadlineISO tiap item). */
+   Rentang diambil dari tag [DD MM] checklist (field deadlineISO tiap item).
+   agTlScope: 'month' (per bulan, harian) | 'year' (setahun penuh, lintas bulan) */
+const AG_MON3=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+function agScopeTabs(){
+  return `<div class="tabs" style="margin:4px 0 2px">
+    <button class="tab ${agTlScope==='month'?'active':''}" id="agScMonth">📅 Per Bulan</button>
+    <button class="tab ${agTlScope==='year'?'active':''}" id="agScYear">📆 Setahun Penuh</button></div>`;
+}
 function renderAgendaTimeline(det){
   const now=new Date();
   if(calYear===undefined){ calYear=now.getFullYear(); calMonth=now.getMonth(); }
+  return agScopeTabs() + (agTlScope==='year' ? agTlYearBrand(det) : agTlMonthBrand(det));
+}
+// ── Per bulan (harian) ──
+function agTlMonthBrand(det){
   const pad=n=>String(n).padStart(2,'0');
   const dim=new Date(calYear,calMonth+1,0).getDate();
   const monISO=`${calYear}-${pad(calMonth+1)}-`;
-  // Kelompokkan per card → kumpulkan tanggal item yang jatuh di bulan ini
   const cards={};
   det.forEach(x=>{
-    if(!x.deadlineISO) return;
-    if(x.deadlineISO.slice(0,8)!==monISO) return; // hanya item di bulan tampil
+    if(!x.deadlineISO || x.deadlineISO.slice(0,8)!==monISO) return;
     const day=+x.deadlineISO.slice(8,10);
     const c=(cards[x.card]=cards[x.card]||{card:x.card,min:day,max:day,items:0,done:0,pic:x.pic});
     c.min=Math.min(c.min,day); c.max=Math.max(c.max,day); c.items++;
@@ -1397,21 +1412,52 @@ function renderAgendaTimeline(det){
   const arr=Object.keys(cards).map(k=>cards[k]).sort((a,b)=>a.min-b.min||a.max-b.max);
   const bar=`<div class="calbar"><button class="iconbtn" id="calPrev">←</button><span class="calmon">${AG_MON[calMonth]} ${calYear}</span><button class="iconbtn" id="calNext">→</button></div>`;
   if(!arr.length) return bar+'<div class="agtl-empty">Tidak ada agenda dengan tanggal di bulan ini. Pastikan item checklist punya tag [DD MM].</div>';
-  // Skala tanggal (tiap ~5 hari)
   const ticks=[]; for(let d=1;d<=dim;d+=5){ ticks.push(`<span style="left:${((d-0.5)/dim*100).toFixed(2)}%">${d}</span>`); }
   ticks.push(`<span style="left:${((dim-0.5)/dim*100).toFixed(2)}%">${dim}</span>`);
   const grids=[]; for(let d=1;d<dim;d++){ grids.push(`<div class="agtl-grid" style="left:${(d/dim*100).toFixed(2)}%"></div>`); }
   const rows=arr.map(c=>{
     const left=((c.min-1)/dim*100), width=Math.max(((c.max-c.min+1)/dim*100),3);
     const cls=c.done===c.items?'done':(c.done>0?'prog':'plan');
-    const rentang = c.min===c.max ? `${c.min} ${AG_MON[calMonth].slice(0,3)}` : `${c.min}–${c.max} ${AG_MON[calMonth].slice(0,3)}`;
+    const rentang = c.min===c.max ? `${c.min} ${AG_MON3[calMonth]}` : `${c.min}–${c.max} ${AG_MON3[calMonth]}`;
     return `<div class="agtl-row"><div class="agtl-name">${esc(c.card)||'—'}<small>${c.done}/${c.items} item · ${esc(c.pic)||'—'}</small></div>
       <div class="agtl-track">${grids.join('')}<div class="agtl-bar ${cls}" style="left:${left.toFixed(2)}%;width:${width.toFixed(2)}%" title="${esc(c.card)} · ${rentang}">${rentang}</div></div></div>`;
   }).join('');
   return bar+`<div class="agtl">
     <div class="agtl-days"><div></div><div class="agtl-scale">${ticks.join('')}</div></div>
     ${rows}</div>
-    <div class="note" style="margin-top:8px">Bar = rentang dari item checklist paling awal sampai paling akhir di bulan ini. <span style="color:var(--green4)">Hijau</span>=semua selesai · <span style="color:var(--amber)">kuning</span>=berjalan · <span style="color:var(--blue)">biru</span>=belum mulai.</div>`;
+    <div class="note" style="margin-top:8px">Bar = rentang item checklist paling awal→akhir di bulan ini. <span style="color:var(--green4)">Hijau</span>=selesai · <span style="color:var(--amber)">kuning</span>=berjalan · <span style="color:var(--blue)">biru</span>=belum mulai.</div>`;
+}
+// ── Setahun penuh (lintas bulan, sumbu Jan–Des) ──
+function agTlYearBrand(det){
+  const y=calYear;
+  const total=((y%4===0&&y%100!==0)||y%400===0)?366:365;
+  const doy=(Y,M,D)=>Math.round((Date.UTC(Y,M-1,D)-Date.UTC(y,0,1))/86400000)+1; // 1..total
+  const cards={};
+  det.forEach(x=>{
+    if(!x.deadlineISO) return;
+    const Y=+x.deadlineISO.slice(0,4); if(Y!==y) return;
+    const M=+x.deadlineISO.slice(5,7), D=+x.deadlineISO.slice(8,10), n=doy(Y,M,D);
+    const c=(cards[x.card]=cards[x.card]||{card:x.card,min:n,max:n,minMD:[M,D],maxMD:[M,D],items:0,done:0,pic:x.pic});
+    if(n<c.min){c.min=n;c.minMD=[M,D];} if(n>c.max){c.max=n;c.maxMD=[M,D];} c.items++;
+    if(agStatusLabel(x.status)==='Done') c.done++;
+  });
+  const arr=Object.keys(cards).map(k=>cards[k]).sort((a,b)=>a.min-b.min||a.max-b.max);
+  const bar=`<div class="calbar"><button class="iconbtn" id="agYrPrev">←</button><span class="calmon">Tahun ${y}</span><button class="iconbtn" id="agYrNext">→</button></div>`;
+  if(!arr.length) return bar+`<div class="agtl-empty">Tidak ada agenda dengan tanggal di tahun ${y}.</div>`;
+  const labels=AG_MON3.map((m,i)=>`<span style="left:${((doy(y,i+1,15)-0.5)/total*100).toFixed(2)}%">${m}</span>`).join('');
+  const grids=AG_MON3.map((m,i)=> i===0?'':`<div class="agtl-grid" style="left:${((doy(y,i+1,1)-1)/total*100).toFixed(2)}%"></div>`).join('');
+  const md=(a)=>`${a[1]} ${AG_MON3[a[0]-1]}`;
+  const rows=arr.map(c=>{
+    const left=((c.min-1)/total*100), width=Math.max(((c.max-c.min+1)/total*100),1.5);
+    const cls=c.done===c.items?'done':(c.done>0?'prog':'plan');
+    const rentang = c.min===c.max ? md(c.minMD) : `${md(c.minMD)} – ${md(c.maxMD)}`;
+    return `<div class="agtl-row"><div class="agtl-name">${esc(c.card)||'—'}<small>${rentang} · ${c.done}/${c.items}</small></div>
+      <div class="agtl-track">${grids}<div class="agtl-bar ${cls}" style="left:${left.toFixed(2)}%;width:${width.toFixed(2)}%" title="${esc(c.card)} · ${rentang}"></div></div></div>`;
+  }).join('');
+  return bar+`<div class="agtl">
+    <div class="agtl-days"><div></div><div class="agtl-scale">${labels}</div></div>
+    ${rows}</div>
+    <div class="note" style="margin-top:8px">Satu tahun penuh — tiap bar rentang card dari item paling awal→akhir. Rentang tertulis di bawah nama card. <span style="color:var(--green4)">Hijau</span>=selesai · <span style="color:var(--amber)">kuning</span>=berjalan · <span style="color:var(--blue)">biru</span>=belum mulai.</div>`;
 }
 function renderAgendaCalendar(det){
   const now=new Date();
