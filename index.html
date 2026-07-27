@@ -87,6 +87,19 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
 .calitem{font-size:9.5px;line-height:1.25;background:var(--green-bg);color:var(--green4);border-radius:4px;padding:2px 4px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:default}
 .calitem.done{background:var(--cream2);color:var(--text3);text-decoration:line-through}
 @media(max-width:640px){.calcell{min-height:56px}.calitem{font-size:8.5px}}
+/* Timeline start–end agenda */
+.agtl{display:flex;flex-direction:column;gap:5px;margin-top:8px}
+.agtl-days{display:grid;grid-template-columns:160px 1fr;gap:8px;align-items:end;font-size:9px;color:var(--text3)}
+.agtl-scale{position:relative;height:14px}
+.agtl-scale span{position:absolute;transform:translateX(-50%);font-family:'DM Mono',monospace}
+.agtl-row{display:grid;grid-template-columns:160px 1fr;gap:8px;align-items:center}
+.agtl-name{font-size:11.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.agtl-name small{display:block;font-weight:400;color:var(--text3);font-size:10px}
+.agtl-track{position:relative;height:24px;background:var(--cream);border:1px solid var(--cream2);border-radius:6px;overflow:hidden}
+.agtl-grid{position:absolute;top:0;bottom:0;border-left:1px solid var(--cream2)}
+.agtl-bar{position:absolute;top:3px;height:18px;border-radius:5px;background:var(--green4);color:#fff;font-size:9.5px;line-height:18px;padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.agtl-bar.prog{background:var(--amber)}.agtl-bar.plan{background:var(--blue)}.agtl-bar.done{background:var(--green4);opacity:.55}
+.agtl-empty{font-size:12px;color:var(--text3);padding:16px;text-align:center}
 /* filter bar */
 .filterbar{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:11px}
 .filterbar input,.filterbar select{height:38px;padding:0 11px;border:1.5px solid var(--cream2);border-radius:9px;background:var(--white);font-size:13px;font-family:inherit;color:var(--text);outline:none}
@@ -213,8 +226,8 @@ table thead th{cursor:pointer;user-select:none}.sort-ind{opacity:.55;font-size:.
   <!-- APP -->
   <div id="app">
     <div class="ntabs" id="brandTabs">
-      <button class="ntab on" data-pane="inquiry">📋 Inquiry</button>
-      <button class="ntab" data-pane="agenda">📌 Agenda</button>
+      <button class="ntab on" data-pane="inquiry">📋 Sales Report</button>
+      <button class="ntab" data-pane="agenda">📌 Agenda Overview</button>
       <button class="ntab" data-pane="finance">💰 Finance</button>
       <button class="ntab" data-pane="marketing">📊 Marketing</button>
       <button class="ntab" data-pane="laporan">📄 Laporan</button>
@@ -1311,9 +1324,11 @@ function renderBrandAgenda(){
     <div class="tabs" style="margin-top:16px">
       <button class="tab ${agendaViewMode==='list'?'active':''}" id="agViewList">📋 List</button>
       <button class="tab ${agendaViewMode==='calendar'?'active':''}" id="agViewCal">📅 Kalender</button>
+      <button class="tab ${agendaViewMode==='timeline'?'active':''}" id="agViewTl">📊 Timeline</button>
     </div>`;
   let body;
-  if(agendaViewMode==='list'){
+  if(agendaViewMode==='timeline'){ body=renderAgendaTimeline(det); }
+  else if(agendaViewMode==='list'){
     const rows=det.length?det.map(x=>`<tr>
       <td>${esc(x.card)||'—'}</td><td>${esc(x.subtask)||'—'}</td><td>${esc(x.bulan)||'—'}</td>
       <td>${esc(x.deadline)||'—'}</td><td>${agStatusLabel(x.status)==='Done'?'✓ Completed':(x.sisaHari==null?'—':x.sisaHari+' hari')}</td>
@@ -1323,10 +1338,49 @@ function renderBrandAgenda(){
   box.innerHTML=head+body;
   $('agViewList').onclick=()=>{agendaViewMode='list';renderBrandAgenda();};
   $('agViewCal').onclick=()=>{agendaViewMode='calendar';renderBrandAgenda();};
-  if(agendaViewMode==='calendar'){
-    $('calPrev').onclick=()=>{calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderBrandAgenda();};
-    $('calNext').onclick=()=>{calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderBrandAgenda();};
+  $('agViewTl').onclick=()=>{agendaViewMode='timeline';renderBrandAgenda();};
+  if(agendaViewMode==='calendar'||agendaViewMode==='timeline'){
+    const p=$('calPrev'), n=$('calNext');
+    if(p) p.onclick=()=>{calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderBrandAgenda();};
+    if(n) n.onclick=()=>{calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderBrandAgenda();};
   }
+}
+/* Timeline start–end: 1 baris per card, bar dari item paling awal → paling akhir.
+   Rentang diambil dari tag [DD MM] checklist (field deadlineISO tiap item). */
+function renderAgendaTimeline(det){
+  const now=new Date();
+  if(calYear===undefined){ calYear=now.getFullYear(); calMonth=now.getMonth(); }
+  const pad=n=>String(n).padStart(2,'0');
+  const dim=new Date(calYear,calMonth+1,0).getDate();
+  const monISO=`${calYear}-${pad(calMonth+1)}-`;
+  // Kelompokkan per card → kumpulkan tanggal item yang jatuh di bulan ini
+  const cards={};
+  det.forEach(x=>{
+    if(!x.deadlineISO) return;
+    if(x.deadlineISO.slice(0,8)!==monISO) return; // hanya item di bulan tampil
+    const day=+x.deadlineISO.slice(8,10);
+    const c=(cards[x.card]=cards[x.card]||{card:x.card,min:day,max:day,items:0,done:0,pic:x.pic});
+    c.min=Math.min(c.min,day); c.max=Math.max(c.max,day); c.items++;
+    if(agStatusLabel(x.status)==='Done') c.done++;
+  });
+  const arr=Object.keys(cards).map(k=>cards[k]).sort((a,b)=>a.min-b.min||a.max-b.max);
+  const bar=`<div class="calbar"><button class="iconbtn" id="calPrev">←</button><span class="calmon">${AG_MON[calMonth]} ${calYear}</span><button class="iconbtn" id="calNext">→</button></div>`;
+  if(!arr.length) return bar+'<div class="agtl-empty">Tidak ada agenda dengan tanggal di bulan ini. Pastikan item checklist punya tag [DD MM].</div>';
+  // Skala tanggal (tiap ~5 hari)
+  const ticks=[]; for(let d=1;d<=dim;d+=5){ ticks.push(`<span style="left:${((d-0.5)/dim*100).toFixed(2)}%">${d}</span>`); }
+  ticks.push(`<span style="left:${((dim-0.5)/dim*100).toFixed(2)}%">${dim}</span>`);
+  const grids=[]; for(let d=1;d<dim;d++){ grids.push(`<div class="agtl-grid" style="left:${(d/dim*100).toFixed(2)}%"></div>`); }
+  const rows=arr.map(c=>{
+    const left=((c.min-1)/dim*100), width=Math.max(((c.max-c.min+1)/dim*100),3);
+    const cls=c.done===c.items?'done':(c.done>0?'prog':'plan');
+    const rentang = c.min===c.max ? `${c.min} ${AG_MON[calMonth].slice(0,3)}` : `${c.min}–${c.max} ${AG_MON[calMonth].slice(0,3)}`;
+    return `<div class="agtl-row"><div class="agtl-name">${esc(c.card)||'—'}<small>${c.done}/${c.items} item · ${esc(c.pic)||'—'}</small></div>
+      <div class="agtl-track">${grids.join('')}<div class="agtl-bar ${cls}" style="left:${left.toFixed(2)}%;width:${width.toFixed(2)}%" title="${esc(c.card)} · ${rentang}">${rentang}</div></div></div>`;
+  }).join('');
+  return bar+`<div class="agtl">
+    <div class="agtl-days"><div></div><div class="agtl-scale">${ticks.join('')}</div></div>
+    ${rows}</div>
+    <div class="note" style="margin-top:8px">Bar = rentang dari item checklist paling awal sampai paling akhir di bulan ini. <span style="color:var(--green4)">Hijau</span>=semua selesai · <span style="color:var(--amber)">kuning</span>=berjalan · <span style="color:var(--blue)">biru</span>=belum mulai.</div>`;
 }
 function renderAgendaCalendar(det){
   const now=new Date();
