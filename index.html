@@ -1660,9 +1660,55 @@ async function loadBrandMarketing(){
     brandMkt=d; mktLoaded=true; renderBrandMarketing();
   }catch(e){ box.innerHTML='<div class="err show">Gagal terhubung ke server.</div>'; }
 }
+/* ══════════ SARAN SOSMED (rule-based, per brand) — identik dgn dashboard ══════════ */
+function sosmedAdvice(cur, prev){
+  const S=[], W=[], A=[]; const put=(g,t)=>g.push({scope:'Sosmed',txt:t});
+  const pct=(a,b)=>b?((a-b)/b*100):0;
+  if(!cur.reach && !cur.views && !cur.posts){ put(A,'Belum ada data sosmed bulan ini dari Windsor untuk brand ini.'); return {sudah:S,perhatian:W,aksi:A}; }
+  if(prev && prev.reach){
+    const rd=pct(cur.reach,prev.reach);
+    if(rd<=-INS.reachDrop) put(A,`<b>Jangkauan turun ${Math.abs(Math.round(rd))}%</b> (${fmtNum(prev.reach)}→${fmtNum(cur.reach)} orang) — cek frekuensi & jenis konten.`);
+    else if(rd<0) put(W,`Jangkauan turun tipis ${Math.abs(Math.round(rd))}% vs bulan lalu.`);
+    else put(S,`Jangkauan naik ${Math.round(rd)}% (${fmtNum(prev.reach)}→${fmtNum(cur.reach)} orang).`);
+  } else if(cur.reach) put(S,`Jangkauan ${fmtNum(cur.reach)} orang.`);
+  if(cur.er){
+    if(cur.er<INS.erLow) put(A,`Engagement rate ${cur.er.toFixed(2)}% di bawah batas sehat ${INS.erLow}% — konten dilihat tapi tak memicu interaksi.`);
+    else if(cur.er>=INS.erGood) put(S,`Engagement rate ${cur.er.toFixed(2)}% sehat (>${INS.erGood}%).`);
+    else put(W,`Engagement rate ${cur.er.toFixed(2)}% wajar tapi belum kuat (target >${INS.erGood}%).`);
+  }
+  const eng=(cur.likes||0)+(cur.comments||0)+(cur.shares||0)+(cur.saves||0);
+  if(eng){
+    const shareP=(cur.shares||0)/eng*100, saveP=(cur.saves||0)/eng*100;
+    if(saveP>=INS.saveRatio||shareP>=INS.shareRatio) put(S,`Interaksi berkualitas — save ${saveP.toFixed(1)}% & share ${shareP.toFixed(1)}% dari total; konten layak disimpan/dibagikan.`);
+    else put(W,`Mayoritas interaksi cuma like — share ${shareP.toFixed(1)}%, save ${saveP.toFixed(1)}%. Coba konten yang lebih "layak simpan/bagikan".`);
+  }
+  if(cur.posts){
+    const rpp=Math.round((cur.reach||0)/cur.posts);
+    put(S,`${cur.posts} konten diposting — rata-rata ${fmtNum(rpp)} reach/konten.`);
+    if(prev && prev.posts && cur.posts>prev.posts && prev.reach && cur.reach<prev.reach)
+      put(A,`<b>Posting lebih banyak (${prev.posts}→${cur.posts}) tapi reach turun</b> — perbaiki kualitas/format, bukan sekadar kuantitas.`);
+    if(prev && prev.posts && cur.posts < prev.posts*0.6)
+      put(W,`Jumlah konten turun drastis (${prev.posts}→${cur.posts}) — jaga konsistensi posting.`);
+  } else put(W,`Belum ada konten terhitung bulan ini.`);
+  if(cur.follows>0) put(S,`${fmtNum(cur.follows)} follower baru bulan ini.`);
+  else if(prev && prev.follows>0) put(W,`Tidak ada follower baru (bulan lalu ${fmtNum(prev.follows)}) — pertumbuhan berhenti.`);
+  return {sudah:S,perhatian:W,aksi:A};
+}
+function sosmedAdviceHtml(cur, prev, brand, periode){
+  const R=sosmedAdvice(cur, prev);
+  return insightBoxHtml('🤖 Saran Sosmed — '+insEsc(brand),
+    `${insEsc(periode)} — ${R.sudah.length} baik · ${R.perhatian.length} perhatian · ${R.aksi.length} aksi`,
+    R, 'Otomatis dari data Windsor dengan ambang tetap. Indikatif untuk arah konten; keputusan tetap di tim.');
+}
 function renderBrandMarketing(){
   const box=$('pane-marketing'), rows=brandMkt.rows||[];
   const sum=k=>rows.reduce((s,x)=>s+(x[k]||0),0), avg=k=>rows.length?rows.reduce((s,x)=>s+(x[k]||0),0)/rows.length:0;
+  // Saran: bulan terakhir yg ada datanya vs sebelumnya
+  const sorted=rows.slice().sort((a,b)=>AG_MON.indexOf(a.month)-AG_MON.indexOf(b.month));
+  const objOf=r=>r?{reach:r.reach||0,views:r.views||0,likes:r.likes||0,comments:r.comments||0,shares:r.shares||0,saves:r.saves||0,follows:r.follows||0,posts:r.posts||0,er:r.avgER||0}:null;
+  const last=sorted[sorted.length-1], prev=sorted[sorted.length-2];
+  const adviceBox = last ? sosmedAdviceHtml(objOf(last), objOf(prev), auth.brand, last.month+' (terakhir)')
+    : '<div class="note" style="margin:6px 0">Belum ada data sosmed dari Windsor.</div>';
   const tb=rows.length?rows.slice().sort((a,b)=>AG_MON.indexOf(a.month)-AG_MON.indexOf(b.month)).map(r=>`<tr>
     <td>${esc(r.month)} ${r.year}</td><td class="num">${fmtNum(r.posts)}</td><td class="num">${fmtNum(r.reach)}</td>
     <td class="num">${fmtNum(r.views)}</td><td class="num">${fmtNum(r.likes)}</td><td class="num">${fmtNum(r.saves)}</td>
@@ -1675,6 +1721,7 @@ function renderBrandMarketing(){
       <div class="kpi conv"><h3>Avg ER%</h3><div class="v num">${avg('avgER').toFixed(2)}%</div></div>
       <div class="kpi deal"><h3>New Follows</h3><div class="v num">${fmtNum(sum('follows'))}</div></div>
     </div>
+    ${adviceBox}
     <div class="section-title">📑 Detail per Laporan</div>
     <div class="tablewrap"><table><thead><tr><th>Periode</th><th>Posts</th><th>Reach</th><th>Views</th><th>Likes</th><th>Saves</th><th>Follows</th><th>Avg ER</th><th>Story ER</th></tr></thead><tbody>${tb}</tbody></table></div>`;
 }
