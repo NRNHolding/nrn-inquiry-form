@@ -1515,7 +1515,7 @@ let estModeBN='akhir';  // 'akhir' (bulan card berakhir) | 'sebar' (ikut sebaran
 // Estimasi per bulan sesuai cara hitung terpilih (sama logika dgn dashboard BOD).
 function hitungEstMapBN(mode){
   const map={}; const add=(m,v)=>{ if(!m) return; map[m]=(map[m]||0)+v; };
-  if(mode!=='sebar'){ (brandFin.rows||[]).forEach(r=>add(r.month, r.est||0)); return map; }
+  if(mode!=='sebar'){ (brandFin.estDetail||[]).forEach(d=>add(d.month, d.est||0)); return map; } // estDetail override-aware
   const itemsByCard={};
   (brandFin.detail||[]).forEach(d=>{ (itemsByCard[d.card]=itemsByCard[d.card]||[]).push(d); });
   (brandFin.estDetail||[]).forEach(e=>{
@@ -1594,16 +1594,22 @@ function renderBrandFinance(){
   const pecahArr=Object.keys(pecahMap).map(k=>pecahMap[k]); pecahArr.forEach(p=>p.st=statusPecah(p));
   pecahArr.sort((a,b)=>a.st.urut-b.st.urut||(b.est||b.proj)-(a.est||a.proj));
   const nPecah={}; pecahArr.forEach(p=>nPecah[p.st.k]=(nPecah[p.st.k]||0)+1);
+  const ovByCard={}; (brandFin.budgetOverrides||[]).forEach(o=>{ ovByCard[o.card]=o; });
   const pecahRows=pecahArr.map(p=>{
     const sisa=p.est-p.proj, pct=p.est?Math.round(p.proj/p.est*100):(p.proj?100:0), cls=pct>100?'over':(pct<50?'low':'');
     const sisaTxt=!p.est?'<span class="lap-na">—</span>':sisa>0?`<span style="color:var(--amber)">${fmtRp(sisa)}</span>`:sisa<0?`<span style="color:var(--red)">lebih ${fmtRp(-sisa)}</span>`:'<span style="color:var(--green4)">—</span>';
+    const ov=ovByCard[p.card];
+    const stBadge = ov ? (ov.status==='approved'?'<div class="vsub" style="color:var(--green4)">✓ disetujui BOD</div>'
+      : ov.status==='rejected'?('<div class="vsub" style="color:var(--red)">✗ ditolak'+(ov.note?': '+esc(ov.note):'')+'</div>')
+      : ('<div class="vsub" style="color:var(--amber)">⏳ usulan '+fmtRp(ov.budget)+' menunggu BOD</div>')) : '';
     return `<tr><td>${esc(p.card)||'—'}</td><td><b>${esc(p.month)||'—'}</b></td>
-      <td class="num">${p.est?fmtRp(p.est):'<span class="lap-na">belum diisi</span>'}</td>
+      <td class="num">${p.est?fmtRp(p.est):'<span class="lap-na">belum diisi</span>'}${stBadge}
+        <div style="display:flex;gap:4px;margin-top:4px;justify-content:flex-end"><input type="number" min="0" placeholder="usul budget" class="bgt-input" data-month="${esc(p.month)}" style="width:104px;font-size:12px;padding:3px 6px;border:1px solid var(--cream2);border-radius:6px"><button class="iconbtn bgt-ajukan" data-card="${esc(p.card)}" style="font-size:11px">Ajukan</button></div></td>
       <td class="num">${p.proj?fmtRp(p.proj):'<span class="lap-na">belum dirinci</span>'}</td>
       <td class="num">${sisaTxt}</td>
       <td style="min-width:100px"><div class="bar" style="margin-top:0"><i class="${cls}" style="width:${Math.min(pct,100)}%"></i></div><div class="vsub muted" style="margin-top:2px">${p.est?pct+'%':'—'} · ${p.n} item</div></td>
       <td><span class="pill" style="background:transparent;border:1px solid ${p.st.warna};color:${p.st.warna}">${p.st.label}</span></td></tr>`;
-  }).join('')||'<tr><td colspan="7" class="muted-empty" style="text-align:center;padding:16px">Belum ada card dengan estimasi maupun rincian.</td></tr>';
+  }).join('')||'<tr><td colspan="7" class="muted-empty" style="text-align:center;padding:16px">Belum ada card dengan budget maupun rincian.</td></tr>';
   const chip=(k,label,warna)=> nPecah[k]?`<span class="chip" style="background:transparent;border:1px solid ${warna};color:${warna}">${label}: ${nPecah[k]}</span>`:'';
 
   const modeNote = estModeBN==='akhir'
@@ -1627,7 +1633,7 @@ function renderBrandFinance(){
     </div>
     ${estPanel}${projPanel}
     <div class="section-title">🧩 Pecahan Budget — sudah dirinci berapa?</div>
-    <div class="note" style="margin:-4px 0 8px"><b>Proyeksi adalah pecahan dari Budget yang disepakati.</b> Estimasi ditulis sekali di deskripsi card, lalu dipecah jadi item checklist bernominal <code>(Rp ...)</code>. Kalau semua sudah dirinci, jumlah pecahan = estimasi.</div>
+    <div class="note" style="margin:-4px 0 8px"><b>Proyeksi adalah pecahan dari Budget yang disepakati.</b> Ajukan/revisi angka <b>Budget</b> langsung di kolom Budget (tak perlu ke Trello) → berlaku setelah <b>di-approve BOD</b>. Proyeksi dipecah jadi item bernominal <code>(Rp ...)</code>; kalau semua sudah dirinci, jumlah pecahan = Budget.</div>
     <div class="statrow" style="margin-bottom:8px">
       ${chip('lebih','⚠ Melebihi estimasi','var(--red)')}${chip('belum','● Belum dirinci','var(--red)')}${chip('noest','◐ Budget belum diisi','var(--amber)')}${chip('sebagian','◐ Baru sebagian','var(--amber)')}${chip('pas','✓ Terpecah pas','var(--green4)')}${chip('kosong','○ Belum ada angka','var(--text3)')}
     </div>
@@ -1640,7 +1646,31 @@ function renderBrandFinance(){
   $('estCardBN').onclick=()=>{ finOpenBN=finOpenBN==='est'?'':'est'; renderBrandFinance(); };
   $('projCardBN').onclick=()=>{ finOpenBN=finOpenBN==='proj'?'':'proj'; renderBrandFinance(); };
   $('estModeBN').onchange=e=>{ estModeBN=e.target.value; renderBrandFinance(); };
+  box.querySelectorAll('.bgt-ajukan').forEach(b=>b.onclick=()=>{
+    const inp=b.closest('td').querySelector('.bgt-input');
+    proposeBudget(b.dataset.card, inp?inp.dataset.month:'', inp?Number(inp.value):0);
+  });
   if(typeof posisiTooltipBN==='function') posisiTooltipBN(box);
+}
+// Brand ajukan/revisi Budget → status 'pending', menunggu approval BOD.
+async function proposeBudget(card, month, budget){
+  if(!(budget>0)){ toast('Isi nominal budget dulu.', true); return; }
+  if(!confirm('Ajukan budget '+fmtRp(budget)+' untuk "'+card+'"?\nBerlaku setelah di-approve BOD.')) return;
+  try{
+    const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({
+      type:'proposeBudget', brand:auth.brand, password:finPw||auth.password,
+      card:card, month:month, year:brandFin.year, budget:budget })});
+    const j=await r.json();
+    if(j.success){ toast('✅ Usulan budget dikirim — menunggu approval BOD.'); reloadBrandFinance(); }
+    else toast('Gagal: '+(j.error||''), true);
+  }catch(e){ toast('Gagal terhubung ke server.', true); }
+}
+async function reloadBrandFinance(){
+  try{
+    const url=APPS_SCRIPT_URL+'?action=getBrandFinance&brand='+encodeURIComponent(auth.brand)+'&password='+encodeURIComponent(finPw||auth.password);
+    const d=await (await fetch(url)).json();
+    if(d.success){ brandFin=d; renderBrandFinance(); }
+  }catch(e){}
 }
 
 // Balik arah tooltip ⓘ kalau mepet tepi layar (cegah scroll samping)
