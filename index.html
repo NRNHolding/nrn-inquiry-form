@@ -1364,13 +1364,26 @@ function renderBrandAgenda(){
   let body;
   if(agendaViewMode==='timeline'){ body=renderAgendaTimeline(det); }
   else if(agendaViewMode==='list'){
-    const rows=det.length?det.map(x=>`<tr>
-      <td>${esc(x.card)||'—'}</td><td>${esc(x.subtask)||'—'}</td><td>${esc(x.bulan)||'—'}</td>
-      <td>${esc(x.deadline)||'—'}</td><td>${agStatusLabel(x.status)==='Done'?'✓ Completed':(x.sisaHari==null?'—':x.sisaHari+' hari')}</td>
-      <td>${agPill(x.status)}</td><td class="muted">${esc(x.pic)||'—'}</td></tr>`).join(''):'<tr><td colspan="7" class="muted-empty" style="text-align:center;padding:20px">Belum ada agenda.</td></tr>';
-    body=`<div class="tablewrap"><table><thead><tr><th>Card / Agenda</th><th>Subtask</th><th>Bulan</th><th>Deadline</th><th>Sisa Hari</th><th>Status</th><th>PIC</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    const stOpt=(sel)=>['Task Created','Checklist Created','In Progress','Done'].map(s=>`<option ${agStatusLabel(sel)===agStatusLabel(s)?'selected':''}>${s}</option>`).join('');
+    const inStyle='font-size:12px;padding:3px 5px;border:1px solid var(--cream2);border-radius:6px;background:var(--white)';
+    const rows=det.length?det.map((x,i)=>`<tr data-card="${esc(x.card)}" data-sub="${esc(x.subtask)}">
+      <td>${esc(x.card)||'—'}${x.edited?' <span class="pill" style="background:#ede9fe;color:#5b21b6;font-size:9px">✎ web</span>':''}</td>
+      <td>${esc(x.subtask)||'—'}</td>
+      <td><input type="date" class="ag-dl" value="${esc(x.deadlineISO)||''}" style="${inStyle}"></td>
+      <td><input type="number" class="ag-nom" min="0" placeholder="0" value="${x.nominal||''}" style="${inStyle};width:110px"></td>
+      <td>${agStatusLabel(x.status)==='Done'?'✓ Completed':(x.sisaHari==null?'—':x.sisaHari+' hari')}</td>
+      <td><select class="ag-st" style="${inStyle}">${stOpt(x.status)}</select></td>
+      <td class="muted">${esc(x.pic)||'—'}</td>
+      <td><button class="iconbtn ag-save" style="font-size:11px">💾</button></td></tr>`).join(''):'<tr><td colspan="8" class="muted-empty" style="text-align:center;padding:20px">Belum ada agenda.</td></tr>';
+    body=`<div class="note" style="margin:6px 0">✎ Edit <b>tanggal</b>, <b>nominal (Rp)</b>, atau <b>status</b> langsung di sini → klik 💾. Langsung berlaku (mengalahkan Trello).</div>
+      <div class="tablewrap"><table><thead><tr><th>Card / Agenda</th><th>Subtask</th><th>Deadline</th><th>Nominal (Rp)</th><th>Sisa Hari</th><th>Status</th><th>PIC</th><th>Simpan</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   } else { body=renderAgendaCalendar(det); }
   box.innerHTML=head+body;
+  box.querySelectorAll('.ag-save').forEach(b=>b.onclick=()=>{
+    const tr=b.closest('tr');
+    saveProyeksi(tr.dataset.card, tr.dataset.sub,
+      tr.querySelector('.ag-dl').value, tr.querySelector('.ag-nom').value, tr.querySelector('.ag-st').value);
+  });
   $('agViewList').onclick=()=>{agendaViewMode='list';renderBrandAgenda();};
   $('agViewCal').onclick=()=>{agendaViewMode='calendar';renderBrandAgenda();};
   $('agViewTl').onclick=()=>{agendaViewMode='timeline';renderBrandAgenda();};
@@ -1385,6 +1398,17 @@ function renderBrandAgenda(){
     if($('agYrPrev'))  $('agYrPrev').onclick =()=>{calYear--;renderBrandAgenda();};
     if($('agYrNext'))  $('agYrNext').onclick =()=>{calYear++;renderBrandAgenda();};
   }
+}
+// Edit item proyeksi (tanggal/nominal/status) → langsung berlaku.
+async function saveProyeksi(card, subtask, deadline, nominal, status){
+  try{
+    const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({
+      type:'editProyeksi', brand:auth.brand, password:auth.password,
+      card:card, subtask:subtask, deadline:deadline||'', nominal:nominal===''?'':Number(nominal), status:status||'' })});
+    const j=await r.json();
+    if(j.success){ toast('✅ Tersimpan — langsung berlaku.'); agendaLoaded=false; loadBrandAgenda(); }
+    else toast('Gagal: '+(j.error||''), true);
+  }catch(e){ toast('Gagal terhubung ke server.', true); }
 }
 /* Timeline start–end: 1 baris per card, bar dari item paling awal → paling akhir.
    Rentang diambil dari tag [DD MM] checklist (field deadlineISO tiap item).
@@ -1534,7 +1558,7 @@ function hitungEstMapBN(mode){
 function renderBrandFinance(){
   const box=$('pane-finance'), rows=brandFin.rows||[], detail=brandFin.detail||[];
   const sum=(a,k)=>a.reduce((s,x)=>s+(x[k]||0),0);
-  const proj=sum(rows,'proj'),act=sum(rows,'act');
+  const proj=detail.reduce((s,x)=>s+(x.nominal||0),0),act=sum(rows,'act'); // proj override-aware dari detail
   const estMap=hitungEstMapBN(estModeBN);
   const est=Math.round(Object.keys(estMap).reduce((s,m)=>s+estMap[m],0));
   const dirinciPct=est?Math.round(proj/est*100):0;
@@ -1548,7 +1572,7 @@ function renderBrandFinance(){
 
   // Per bulan (Est ikut mode terpilih)
   const bulanSet={}; rows.forEach(r=>bulanSet[r.month]=1); Object.keys(estMap).forEach(m=>bulanSet[m]=1);
-  const projByM={},actByM={}; rows.forEach(r=>{ projByM[r.month]=(projByM[r.month]||0)+(r.proj||0); actByM[r.month]=(actByM[r.month]||0)+(r.act||0); });
+  const projByM={},actByM={}; detail.forEach(d=>{ projByM[d.month]=(projByM[d.month]||0)+(d.nominal||0); }); rows.forEach(r=>{ actByM[r.month]=(actByM[r.month]||0)+(r.act||0); });
   const mRows=Object.keys(bulanSet).sort((a,b)=>AG_MON.indexOf(a)-AG_MON.indexOf(b)).map(m=>{
     const e=Math.round(estMap[m]||0),p=projByM[m]||0,a=actByM[m]||0;
     return `<tr><td><b>${m}</b></td><td class="num">${e?fmtRp(e):'<span class="lap-na">—</span>'}</td><td class="num">${p?fmtRp(p):'<span class="lap-na">—</span>'}</td><td class="num">${a?fmtRp(a):'<span class="lap-na">belum terupdate</span>'}</td></tr>`;
