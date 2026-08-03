@@ -662,14 +662,18 @@ function drawList(rows){
     const ageBadge = aging ? '<span class="age">🔥 '+age+'h</span>' : '';
     const tr = document.createElement('tr');
     if(aging) tr.className = 'aging';
-    tr.innerHTML = `<td>${esc(x.timestamp)||'—'}</td><td>${esc(x.customer)||'—'}</td><td>${esc(x.product)||'—'}</td>
+    const isWeb = x.source==='web';
+    const webTag = isWeb ? ' <span class="pill" style="background:#ede9fe;color:#5b21b6;font-size:9px" title="Dari website revolt-web'+(x.webStatus?' · status asli: '+esc(x.webStatus):'')+'">🌐 web</span>' : '';
+    const aksi = isWeb ? '<span class="muted-empty" title="Kelola di admin revolt-web">🌐 read-only</span>'
+                       : `<button class="iconbtn" data-edit="${i}">✎ Edit</button>`;
+    tr.innerHTML = `<td>${esc(x.timestamp)||'—'}</td><td>${esc(x.customer)||'—'}${webTag}</td><td>${esc(x.product)||'—'}</td>
       <td>${esc(x.kategori)||'—'}</td><td>${jenisTag(x.jenisInquiry)}</td><td>${esc(x.tanggalAcara)||'—'}</td><td>${esc(x.referral)||'—'}</td>
       <td class="num">${fmtRp(x.nominal)}</td><td>${esc(x.contactVia)||'—'}</td>
       <td>${statusPill(x.status||'')}${ageBadge}</td>
       <td>${esc(x.tglQuotation)||'—'}</td><td>${esc(x.tglSampling)||'—'}</td>
       <td>${esc(x.tglDeal)||'—'}</td><td>${esc(x.tglCancel)||'—'}</td>
       <td>${esc(x.salesPic)||'—'}</td>
-      <td><button class="iconbtn" data-edit="${i}">✎ Edit</button></td>`;
+      <td>${aksi}</td>`;
     tb.appendChild(tr);
   });
   tb.querySelectorAll('[data-edit]').forEach(b=> b.onclick = ()=> openEdit(+b.dataset.edit));
