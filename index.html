@@ -958,7 +958,7 @@ function buildInsight(D){
     put(A,'Anggaran',`Belum ada data anggaran ${insEsc(D.month)} sama sekali. Kemungkinan card Trello bulan ini belum diisi <code>Estimated Budget:</code> di deskripsi, dan checklist-nya belum diberi nominal <code>(Rp ...)</code>.`);
   } else {
     if(!b.est && b.proj)
-      put(A,'Anggaran',`Rencana belanja ${fmtRp(b.proj)} sudah jalan, tapi <b>patokan awalnya (Budget Estimasi) tidak pernah diisi</b> — jadi tidak ada pembanding untuk menilai rencana ini wajar atau tidak. Isi <code>Estimated Budget:</code> di deskripsi card.`);
+      put(A,'Anggaran',`Rencana belanja ${fmtRp(b.proj)} sudah jalan, tapi <b>patokan awalnya (Budget) tidak pernah diisi</b> — jadi tidak ada pembanding untuk menilai rencana ini wajar atau tidak. Isi <code>Estimated Budget:</code> di deskripsi card.`);
     if(b.est && b.proj > b.est*1.2)
       put(W,'Anggaran',`Rencana terkini ${fmtRp(b.proj)} sudah ${insSg(insPct(b.proj-b.est,b.est))} di atas patokan awal ${fmtRp(b.est)} — rencananya membengkak, meski uangnya belum tentu keluar.`);
 
@@ -1565,7 +1565,7 @@ function renderBrandFinance(){
     `<tr><td>${esc(d.card)||'—'}</td><td><b>${esc(d.month)||'—'}</b></td><td class="muted">${esc(d.list)||'—'}</td><td class="num">${fmtRp(d.est)}</td></tr>`
   ).join('')||'<tr><td colspan="4" class="muted-empty" style="text-align:center;padding:16px">Belum ada card dengan Estimated Budget.</td></tr>';
   const estPanel=finOpenBN!=='est'?'':`
-    <div class="section-title">🔎 Rincian Budget Estimasi — dari card mana saja</div>
+    <div class="section-title">🔎 Rincian Budget — dari card mana saja</div>
     <div class="note" style="margin:-4px 0 8px">Diambil dari <b>Estimated Budget:</b> di deskripsi tiap card Trello.</div>
     <div class="tablewrap"><table><thead><tr><th>Card / Agenda</th><th>Bulan</th><th>List</th><th>Estimasi</th></tr></thead><tbody>${eRows}<tr><td colspan="3" style="text-align:right"><b>Total</b></td><td class="num"><b>${fmtRp(estDetTotal)}</b></td></tr></tbody></table></div>`;
 
@@ -1580,12 +1580,12 @@ function renderBrandFinance(){
     <div class="note" style="margin:-4px 0 8px">Dijumlahkan dari nominal <b>(Rp ...)</b> di item checklist. Rincian per item ada di tabel <b>Rincian Pengeluaran</b> di bawah.</div>
     <div class="tablewrap"><table><thead><tr><th>Card / Agenda</th><th>Bulan</th><th>Jml Item</th><th>Proyeksi</th></tr></thead><tbody>${pRows}<tr><td colspan="3" style="text-align:right"><b>Total</b></td><td class="num"><b>${fmtRp(pArr.reduce((s,p)=>s+p.total,0))}</b></td></tr></tbody></table></div>`;
 
-  // ── Pecahan Estimasi per card ──
+  // ── Pecahan Budget per card ──
   const pecahMap={}; const kunci=(c)=>c;
   estDet.forEach(d=>{ const k=kunci(d.card); if(!pecahMap[k]) pecahMap[k]={card:d.card,month:d.month,est:0,proj:0,n:0}; pecahMap[k].est+=d.est||0; });
   detail.forEach(d=>{ const k=kunci(d.card); if(!pecahMap[k]) pecahMap[k]={card:d.card,month:d.month,est:0,proj:0,n:0}; pecahMap[k].proj+=d.nominal||0; pecahMap[k].n++; });
   const statusPecah=p=>{ const sisa=p.est-p.proj, tol=Math.max(1000,p.est*0.005);
-    if(!p.est&&p.proj)  return {k:'noest',   urut:1,label:'Estimasi belum diisi',warna:'var(--amber)'};
+    if(!p.est&&p.proj)  return {k:'noest',   urut:1,label:'Budget belum diisi',warna:'var(--amber)'};
     if(!p.est&&!p.proj) return {k:'kosong',  urut:4,label:'Belum ada angka',      warna:'var(--text3)'};
     if(!p.proj)         return {k:'belum',   urut:2,label:'Belum dirinci',        warna:'var(--red)'};
     if(sisa>tol)        return {k:'sebagian',urut:3,label:'Baru sebagian',        warna:'var(--amber)'};
@@ -1607,7 +1607,7 @@ function renderBrandFinance(){
   const chip=(k,label,warna)=> nPecah[k]?`<span class="chip" style="background:transparent;border:1px solid ${warna};color:${warna}">${label}: ${nPecah[k]}</span>`:'';
 
   const modeNote = estModeBN==='akhir'
-    ? `<div class="note" style="margin:-4px 0 8px;background:var(--gold-bg);border:1px solid #e8d49a;border-radius:8px;padding:8px 10px;color:var(--text2)">⚠️ <b>Selisih Est vs Proyeksi per bulan belum sebanding</b> — Estimasi dihitung penuh di bulan card berakhir, Proyeksi tersebar per item. Ganti ke <b>“Ikut sebaran checklist”</b> di atas, atau lihat perbandingan per card di tabel <b>🧩 Pecahan Estimasi</b>.</div>`
+    ? `<div class="note" style="margin:-4px 0 8px;background:var(--gold-bg);border:1px solid #e8d49a;border-radius:8px;padding:8px 10px;color:var(--text2)">⚠️ <b>Selisih Est vs Proyeksi per bulan belum sebanding</b> — Estimasi dihitung penuh di bulan card berakhir, Proyeksi tersebar per item. Ganti ke <b>“Ikut sebaran checklist”</b> di atas, atau lihat perbandingan per card di tabel <b>🧩 Pecahan Budget</b>.</div>`
     : `<div class="note" style="margin:-4px 0 8px">Estimasi dibagi ke bulan item checklist-nya, jadi <b>sebanding</b> dengan Proyeksi. Total setahun tetap sama.</div>`;
 
   box.innerHTML=`
@@ -1621,20 +1621,20 @@ function renderBrandFinance(){
       </select>
     </div>
     <div class="kpis">
-      <div class="kpi klik${finOpenBN==='est'?' on':''}" id="estCardBN"><h3>Budget Estimasi ${infoIcon(TIP.est)}</h3><div class="v num">${est?fmtRp(est):'<span class="lap-na">belum diisi</span>'}</div><div class="lihat">${finOpenBN==='est'?'▲ tutup rincian':'▼ klik lihat rincian'}</div></div>
+      <div class="kpi klik${finOpenBN==='est'?' on':''}" id="estCardBN"><h3>Budget ${infoIcon(TIP.est)}</h3><div class="v num">${est?fmtRp(est):'<span class="lap-na">belum diisi</span>'}</div><div class="lihat">${finOpenBN==='est'?'▲ tutup rincian':'▼ klik lihat rincian'}</div></div>
       <div class="kpi klik wait${finOpenBN==='proj'?' on':''}" id="projCardBN"><h3>Proyeksi (pecahan estimasi) ${infoIcon(TIP.proj)}</h3><div class="v num">${proj?fmtRp(proj):'<span class="lap-na">belum ada</span>'}</div>${est?`<div class="bar"><i class="${dirinciPct>100?'over':(dirinciPct<50?'low':'')}" style="width:${Math.min(dirinciPct,100)}%"></i></div><div class="vsub muted">${dirinciPct}% dari estimasi sudah dirinci${dirinciPct<100?` · sisa ${fmtRp(Math.max(0,est-proj))}`:''}</div>`:''}<div class="lihat">${finOpenBN==='proj'?'▲ tutup rincian':'▼ klik lihat rincian'}</div></div>
       <div class="kpi"><h3>Budget Aktual</h3><div class="v num">${act?fmtRp(act):'<span class="lap-na">belum terupdate</span>'}</div></div>
     </div>
     ${estPanel}${projPanel}
-    <div class="section-title">🧩 Pecahan Estimasi — sudah dirinci berapa?</div>
-    <div class="note" style="margin:-4px 0 8px"><b>Proyeksi adalah pecahan dari Budget Estimasi.</b> Estimasi ditulis sekali di deskripsi card, lalu dipecah jadi item checklist bernominal <code>(Rp ...)</code>. Kalau semua sudah dirinci, jumlah pecahan = estimasi.</div>
+    <div class="section-title">🧩 Pecahan Budget — sudah dirinci berapa?</div>
+    <div class="note" style="margin:-4px 0 8px"><b>Proyeksi adalah pecahan dari Budget yang disepakati.</b> Estimasi ditulis sekali di deskripsi card, lalu dipecah jadi item checklist bernominal <code>(Rp ...)</code>. Kalau semua sudah dirinci, jumlah pecahan = estimasi.</div>
     <div class="statrow" style="margin-bottom:8px">
-      ${chip('lebih','⚠ Melebihi estimasi','var(--red)')}${chip('belum','● Belum dirinci','var(--red)')}${chip('noest','◐ Estimasi belum diisi','var(--amber)')}${chip('sebagian','◐ Baru sebagian','var(--amber)')}${chip('pas','✓ Terpecah pas','var(--green4)')}${chip('kosong','○ Belum ada angka','var(--text3)')}
+      ${chip('lebih','⚠ Melebihi estimasi','var(--red)')}${chip('belum','● Belum dirinci','var(--red)')}${chip('noest','◐ Budget belum diisi','var(--amber)')}${chip('sebagian','◐ Baru sebagian','var(--amber)')}${chip('pas','✓ Terpecah pas','var(--green4)')}${chip('kosong','○ Belum ada angka','var(--text3)')}
     </div>
     <div class="tablewrap"><table><thead><tr><th>Card / Agenda</th><th>Bulan</th><th>Estimasi</th><th>Sudah dirinci</th><th>Sisa</th><th>Kelengkapan</th><th>Status</th></tr></thead><tbody>${pecahRows}</tbody></table></div>
     <div class="section-title">📅 Per Bulan</div>
     ${modeNote}
-    <div class="tablewrap"><table><thead><tr><th>Bulan</th><th>Budget Est.</th><th>Proyeksi</th><th>Aktual</th></tr></thead><tbody>${mRows}</tbody></table></div>
+    <div class="tablewrap"><table><thead><tr><th>Bulan</th><th>Budget</th><th>Proyeksi</th><th>Aktual</th></tr></thead><tbody>${mRows}</tbody></table></div>
     <div class="section-title">🧾 Rincian Pengeluaran</div>
     <div class="tablewrap"><table><thead><tr><th>Bulan</th><th>Task / Card</th><th>Checklist</th><th>Tanggal</th><th>Nominal</th></tr></thead><tbody>${dRows}</tbody></table></div>`;
   $('estCardBN').onclick=()=>{ finOpenBN=finOpenBN==='est'?'':'est'; renderBrandFinance(); };
@@ -1811,7 +1811,7 @@ function lapAnggaranNote(R, month, nextM){
   const b=R.bCur, t=[];
   if(!b.est&&!b.proj&&!b.act) t.push('Belum ada data anggaran untuk bulan ini.');
   else {
-    if(!b.est&&b.proj) t.push('<b>Budget Estimasi belum diisi</b>, jadi rencana '+fmtRp(b.proj)+' tidak punya pembanding.');
+    if(!b.est&&b.proj) t.push('<b>Budget Budget belum diisi</b>, jadi rencana '+fmtRp(b.proj)+' tidak punya pembanding.');
     if(b.proj&&!b.act) t.push('<b>Biaya aktual belum terupdate</b> — belum ada realisasi tercatat. Kalau sudah ada pengeluaran, minta tim mencatatnya di Trello.');
     else if(b.act&&b.proj&&b.act>b.proj) t.push('<b>Aktual melebihi rencana</b> sebesar '+fmtRp(b.act-b.proj)+' ('+Math.round(b.act/b.proj*100)+'% dari rencana) — perlu dipertanyakan.');
     else if(b.act&&b.proj) t.push('Terpakai '+Math.round(b.act/b.proj*100)+'% dari rencana; sisa '+fmtRp(Math.max(0,b.proj-b.act))+'.');
@@ -1896,7 +1896,7 @@ function renderBrandLaporan(){
 
     <div class="section-title">💰 Penggunaan Anggaran</div>
     <div class="kpis">
-      <div class="kpi"><h3>Budget Estimasi</h3><div class="v num" style="font-size:19px">${R.bCur.est?fmtRp(R.bCur.est):'<span class="lap-na">belum diisi</span>'}</div></div>
+      <div class="kpi"><h3>Budget</h3><div class="v num" style="font-size:19px">${R.bCur.est?fmtRp(R.bCur.est):'<span class="lap-na">belum diisi</span>'}</div></div>
       <div class="kpi wait"><h3>Proyeksi</h3><div class="v num" style="font-size:19px">${R.bCur.proj?fmtRp(R.bCur.proj):'<span class="lap-na">belum ada</span>'}</div></div>
       <div class="kpi"><h3>Aktual</h3><div class="v num" style="font-size:19px">${R.bCur.act?fmtRp(R.bCur.act):'<span class="lap-na">belum terupdate</span>'}</div></div>
       <div class="kpi"><h3>Proyeksi ${R.nextM}</h3><div class="v num" style="font-size:19px">${R.bNext.proj?fmtRp(R.bNext.proj):'<span class="lap-na">belum ada</span>'}</div></div>
@@ -1977,7 +1977,7 @@ function exportBrandLaporanExcel(){
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([
     {Bagian:'Brand',Nilai:auth.brand},{Bagian:'Bulan',Nilai:lapMonth+' '+R.yr},
-    {Bagian:'Budget Estimasi',Nilai:R.bCur.est},{Bagian:'Proyeksi',Nilai:R.bCur.proj},{Bagian:'Aktual',Nilai:R.bCur.act},
+    {Bagian:'Budget',Nilai:R.bCur.est},{Bagian:'Proyeksi',Nilai:R.bCur.proj},{Bagian:'Aktual',Nilai:R.bCur.act},
     {Bagian:'Reach '+lapMonth,Nilai:R.so.reach},{Bagian:'Reach '+R.prevM,Nilai:R.sp.reach},{Bagian:'Avg ER '+lapMonth,Nilai:R.so.er.toFixed(2)+'%'},
     {Bagian:'Agenda Total',Nilai:R.ag.length},{Bagian:'Agenda Done',Nilai:R.agDone},
     {Bagian:'Inquiry Berjalan (Quotation)',Nilai:R.inqQ.length-R.inqS.length},{Bagian:'Inquiry On going sampling',Nilai:R.inqS.length},
