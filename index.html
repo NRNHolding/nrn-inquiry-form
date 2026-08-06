@@ -100,6 +100,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
 .agtl-bar{position:absolute;top:3px;height:18px;border-radius:5px;background:var(--green4);color:#fff;font-size:9.5px;line-height:18px;padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 1px 4px rgba(0,0,0,.15)}
 .agtl-bar.prog{background:var(--amber)}.agtl-bar.plan{background:var(--blue)}.agtl-bar.done{background:var(--green4);opacity:.55}
 .agtl-empty{font-size:12px;color:var(--text3);padding:16px;text-align:center}
+/* Agenda List editable — muat penuh tanpa geser */
+.agedit table{width:100%;font-size:12px;table-layout:fixed}
+.agedit th,.agedit td{padding:6px 7px;vertical-align:middle}
+.agedit td.sub,.agedit th.sub{white-space:normal;word-break:break-word}
+.agedit .ag-dl{width:100%;max-width:128px;font-size:11.5px;padding:3px 4px;border:1px solid var(--cream2);border-radius:6px;background:var(--white)}
+.agedit .ag-nom{width:100%;max-width:96px;font-size:11.5px;padding:3px 5px;border:1px solid var(--cream2);border-radius:6px;background:var(--white);text-align:right}
+.agedit .ag-st{width:100%;font-size:11.5px;padding:3px 4px;border:1px solid var(--cream2);border-radius:6px;background:var(--white)}
+.agedit tr.dirty td{background:#fffaeb}
+.agbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0}
+.agbar .btn-gold{padding:7px 16px}
+.agbar .dirtycount{font-size:12px;color:var(--amber);font-weight:600}
 /* filter bar */
 .filterbar{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:11px}
 .filterbar input,.filterbar select{height:38px;padding:0 11px;border:1.5px solid var(--cream2);border-radius:9px;background:var(--white);font-size:13px;font-family:inherit;color:var(--text);outline:none}
@@ -1365,25 +1376,24 @@ function renderBrandAgenda(){
   if(agendaViewMode==='timeline'){ body=renderAgendaTimeline(det); }
   else if(agendaViewMode==='list'){
     const stOpt=(sel)=>['Task Created','Checklist Created','In Progress','Done'].map(s=>`<option ${agStatusLabel(sel)===agStatusLabel(s)?'selected':''}>${s}</option>`).join('');
-    const inStyle='font-size:12px;padding:3px 5px;border:1px solid var(--cream2);border-radius:6px;background:var(--white)';
-    const rows=det.length?det.map((x,i)=>`<tr data-card="${esc(x.card)}" data-sub="${esc(x.subtask)}">
-      <td>${esc(x.card)||'—'}${x.edited?' <span class="pill" style="background:#ede9fe;color:#5b21b6;font-size:9px">✎ web</span>':''}</td>
-      <td>${esc(x.subtask)||'—'}</td>
-      <td><input type="date" class="ag-dl" value="${esc(x.deadlineISO)||''}" style="${inStyle}"></td>
-      <td><input type="number" class="ag-nom" min="0" placeholder="0" value="${x.nominal||''}" style="${inStyle};width:110px"></td>
-      <td>${agStatusLabel(x.status)==='Done'?'✓ Completed':(x.sisaHari==null?'—':x.sisaHari+' hari')}</td>
-      <td><select class="ag-st" style="${inStyle}">${stOpt(x.status)}</select></td>
-      <td class="muted">${esc(x.pic)||'—'}</td>
-      <td><button class="iconbtn ag-save" style="font-size:11px">💾</button></td></tr>`).join(''):'<tr><td colspan="8" class="muted-empty" style="text-align:center;padding:20px">Belum ada agenda.</td></tr>';
-    body=`<div class="note" style="margin:6px 0">✎ Edit <b>tanggal</b>, <b>nominal (Rp)</b>, atau <b>status</b> langsung di sini → klik 💾. Langsung berlaku (mengalahkan Trello).</div>
-      <div class="tablewrap"><table><thead><tr><th>Card / Agenda</th><th>Subtask</th><th>Deadline</th><th>Nominal (Rp)</th><th>Sisa Hari</th><th>Status</th><th>PIC</th><th>Simpan</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    const rows=det.length?det.map((x)=>{
+      const oSt=agStatusLabel(x.status);
+      return `<tr data-card="${esc(x.card)}" data-sub="${esc(x.subtask)}" data-odl="${esc(x.deadlineISO)||''}" data-onom="${x.nominal||0}" data-ost="${esc(oSt)}">
+      <td>${esc(x.card)||'—'}${x.edited?' <span class="pill" style="background:#ede9fe;color:#5b21b6;font-size:9px">✎</span>':''}</td>
+      <td class="sub">${esc(x.subtask)||'—'}${x.pic?` <span class="muted" style="font-size:10px">· ${esc(x.pic)}</span>`:''}</td>
+      <td><input type="date" class="ag-dl" value="${esc(x.deadlineISO)||''}"></td>
+      <td><input type="number" class="ag-nom" min="0" placeholder="0" value="${x.nominal||''}"></td>
+      <td style="font-size:11px">${oSt==='Done'?'<span style="color:var(--green4)">✓ Selesai</span>':(x.sisaHari==null?'—':(x.sisaHari<0?`<b style="color:var(--red)">${x.sisaHari}h</b>`:x.sisaHari+'h'))}</td>
+      <td><select class="ag-st">${stOpt(x.status)}</select></td></tr>`;
+    }).join(''):'<tr><td colspan="6" class="muted-empty" style="text-align:center;padding:20px">Belum ada agenda.</td></tr>';
+    body=`<div class="note" style="margin:6px 0">✎ Edit <b>tanggal</b>, <b>nominal (Rp)</b>, <b>status</b> beberapa baris sekaligus → klik <b>Simpan Semua</b>. Langsung berlaku (mengalahkan Trello).</div>
+      <div class="agbar"><button class="btn btn-gold" id="agSaveAll" disabled>💾 Simpan Semua</button><span class="dirtycount" id="agDirty"></span><button class="tab" id="agResetEdit" style="display:none">↺ Batalkan perubahan</button></div>
+      <div class="agedit"><table>
+        <colgroup><col style="width:19%"><col style="width:33%"><col style="width:16%"><col style="width:14%"><col style="width:9%"><col style="width:13%"></colgroup>
+        <thead><tr><th>Card / Agenda</th><th class="sub">Subtask</th><th>Deadline</th><th>Nominal (Rp)</th><th>Sisa</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   } else { body=renderAgendaCalendar(det); }
   box.innerHTML=head+body;
-  box.querySelectorAll('.ag-save').forEach(b=>b.onclick=()=>{
-    const tr=b.closest('tr');
-    saveProyeksi(tr.dataset.card, tr.dataset.sub,
-      tr.querySelector('.ag-dl').value, tr.querySelector('.ag-nom').value, tr.querySelector('.ag-st').value);
-  });
+  if(agendaViewMode==='list') wireAgendaBulk(box);
   $('agViewList').onclick=()=>{agendaViewMode='list';renderBrandAgenda();};
   $('agViewCal').onclick=()=>{agendaViewMode='calendar';renderBrandAgenda();};
   $('agViewTl').onclick=()=>{agendaViewMode='timeline';renderBrandAgenda();};
@@ -1399,16 +1409,48 @@ function renderBrandAgenda(){
     if($('agYrNext'))  $('agYrNext').onclick =()=>{calYear++;renderBrandAgenda();};
   }
 }
-// Edit item proyeksi (tanggal/nominal/status) → langsung berlaku.
-async function saveProyeksi(card, subtask, deadline, nominal, status){
+// Deteksi baris yang berubah (bandingkan input vs nilai asli di data-*).
+function agRowChanged(tr){
+  const dl=tr.querySelector('.ag-dl').value||'';
+  const nom=String(Number(tr.querySelector('.ag-nom').value||0));
+  const st=agStatusLabel(tr.querySelector('.ag-st').value);
+  return dl!==(tr.dataset.odl||'') || nom!==String(Number(tr.dataset.onom||0)) || st!==(tr.dataset.ost||'');
+}
+function wireAgendaBulk(box){
+  const btn=box.querySelector('#agSaveAll'), cnt=box.querySelector('#agDirty'), reset=box.querySelector('#agResetEdit');
+  const refresh=()=>{
+    let n=0;
+    box.querySelectorAll('.agedit tbody tr').forEach(tr=>{
+      if(!tr.dataset.card) return;
+      const dirty=agRowChanged(tr); tr.classList.toggle('dirty',dirty); if(dirty) n++;
+    });
+    btn.disabled=n===0; cnt.textContent=n?`${n} baris diubah`:''; reset.style.display=n?'':'none';
+    return n;
+  };
+  box.querySelectorAll('.ag-dl,.ag-nom,.ag-st').forEach(el=>{ el.oninput=refresh; el.onchange=refresh; });
+  btn.onclick=()=>saveProyeksiBulk(box);
+  reset.onclick=()=>renderBrandAgenda();
+  refresh();
+}
+// Simpan semua baris yang berubah dalam 1 kirim.
+async function saveProyeksiBulk(box){
+  const items=[];
+  box.querySelectorAll('.agedit tbody tr').forEach(tr=>{
+    if(!tr.dataset.card || !agRowChanged(tr)) return;
+    items.push({ card:tr.dataset.card, subtask:tr.dataset.sub,
+      deadline:tr.querySelector('.ag-dl').value||'',
+      nominal: tr.querySelector('.ag-nom').value===''?'':Number(tr.querySelector('.ag-nom').value),
+      status: tr.querySelector('.ag-st').value });
+  });
+  if(!items.length){ toast('Tidak ada perubahan.'); return; }
+  const btn=box.querySelector('#agSaveAll'); btn.disabled=true; btn.textContent='Menyimpan…';
   try{
     const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({
-      type:'editProyeksi', brand:auth.brand, password:auth.password,
-      card:card, subtask:subtask, deadline:deadline||'', nominal:nominal===''?'':Number(nominal), status:status||'' })});
+      type:'editProyeksiBulk', brand:auth.brand, password:auth.password, items:items })});
     const j=await r.json();
-    if(j.success){ toast('✅ Tersimpan — langsung berlaku.'); agendaLoaded=false; loadBrandAgenda(); }
-    else toast('Gagal: '+(j.error||''), true);
-  }catch(e){ toast('Gagal terhubung ke server.', true); }
+    if(j.success){ toast('✅ '+(j.count||items.length)+' baris tersimpan — langsung berlaku.'); agendaLoaded=false; loadBrandAgenda(); }
+    else { toast('Gagal: '+(j.error||''), true); btn.disabled=false; btn.textContent='💾 Simpan Semua'; }
+  }catch(e){ toast('Gagal terhubung ke server.', true); btn.disabled=false; btn.textContent='💾 Simpan Semua'; }
 }
 /* Timeline start–end: 1 baris per card, bar dari item paling awal → paling akhir.
    Rentang diambil dari tag [DD MM] checklist (field deadlineISO tiap item).
