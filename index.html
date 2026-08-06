@@ -2098,7 +2098,16 @@ function printBrandLaporan(){
    Blok identik di nrn-dashboard & nrn-inquiry-form — ubah di dua-duanya. */
 (function(){
   var MON={jan:1,feb:2,mar:3,apr:4,mei:5,may:5,jun:6,jul:7,agu:8,agt:8,aug:8,sep:9,okt:10,oct:10,nov:11,nop:11,des:12,dec:12};
-  function txt(td){ return td && td.dataset && td.dataset.sort!=null ? td.dataset.sort : (td ? (td.textContent||'').trim() : ''); }
+  function txt(td){
+    if(!td) return '';
+    if(td.dataset && td.dataset.sort!=null) return td.dataset.sort;
+    var sel=td.querySelector('select');
+    if(sel) return String(sel.value||'').trim();   // select: textContent = semua opsi (menyesatkan)
+    var t=(td.textContent||'').trim();
+    if(t) return t;                                  // ada teks tampilan → pakai itu
+    var f=td.querySelector('input,textarea');       // sel input murni (agenda editable) → pakai value
+    return f ? String(f.value||'').trim() : '';
+  }
   function isBlank(s){ s=String(s).trim().toLowerCase(); return s===''||s==='—'||s==='-'||s.indexOf('belum')===0; }
   function toDate(s){
     s=String(s).trim(); var m;
