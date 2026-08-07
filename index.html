@@ -1725,7 +1725,7 @@ async function proposeBudget(card, month, budget){
   if(!confirm('Ajukan budget '+fmtRp(budget)+' untuk "'+card+'"?\nBerlaku setelah di-approve BOD.')) return;
   try{
     const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({
-      type:'proposeBudget', brand:auth.brand, password:finPw||auth.password,
+      type:'proposeBudget', brand:auth.brand, password:auth.password,
       card:card, month:month, year:brandFin.year, budget:budget })});
     const j=await r.json();
     if(j.success){ toast('✅ Usulan budget dikirim — menunggu approval BOD.'); reloadBrandFinance(); }
