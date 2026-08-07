@@ -1327,6 +1327,8 @@ async function refresh(){
 /* ══════════ BRAND NEEDS — PANES (Agenda / Finance / Marketing) ══════════ */
 let agendaLoaded=false, mktLoaded=false, finLoaded=false, finPw='';
 let brandAgenda=null, brandFin=null, brandMkt=null;
+const EN2ID_MON={January:"Januari",February:"Februari",March:"Maret",April:"April",May:"Mei",June:"Juni",July:"Juli",August:"Agustus",September:"September",October:"Oktober",November:"November",December:"Desember"};
+function normMktMonths(o){ if(o&&Array.isArray(o.rows)) o.rows.forEach(r=>{ if(r&&EN2ID_MON[r.month]) r.month=EN2ID_MON[r.month]; }); return o; }
 let agendaViewMode='list', calYear, calMonth, agTlScope='month';
 const AG_MON=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
@@ -1756,7 +1758,7 @@ async function loadBrandMarketing(){
     const url=APPS_SCRIPT_URL+'?action=getBrandMarketing&brand='+encodeURIComponent(auth.brand)+'&password='+encodeURIComponent(auth.password);
     const d=await (await fetch(url)).json();
     if(!d.success){ box.innerHTML='<div class="err show">'+esc(d.error||'Gagal memuat')+'</div>'; return; }
-    brandMkt=d; mktLoaded=true; renderBrandMarketing();
+    brandMkt=normMktMonths(d); mktLoaded=true; renderBrandMarketing();
   }catch(e){ box.innerHTML='<div class="err show">Gagal terhubung ke server.</div>'; }
 }
 /* ══════════ SARAN SOSMED (rule-based, per brand) — identik dgn dashboard ══════════ */
@@ -1840,7 +1842,7 @@ async function loadBrandLaporan(){
     lapBudget=budget;
     lapNotesBrand=notes.success?notes.notes:{wins:'',losses:'',opportunity:'',problem:''};
     if(!brandAgenda){ const d=await fetch(APPS_SCRIPT_URL+'?action=getBrandAgenda'+q).then(r=>r.json()); if(d.success){brandAgenda=d;agendaLoaded=true;} }
-    if(!brandMkt){ const d=await fetch(APPS_SCRIPT_URL+'?action=getBrandMarketing'+q).then(r=>r.json()); if(d.success){brandMkt=d;mktLoaded=true;} }
+    if(!brandMkt){ const d=await fetch(APPS_SCRIPT_URL+'?action=getBrandMarketing'+q).then(r=>r.json()); if(d.success){brandMkt=normMktMonths(d);mktLoaded=true;} }
     renderBrandLaporan();
   }catch(e){ box.innerHTML='<div class="err show">Gagal terhubung ke server.</div>'; }
 }
