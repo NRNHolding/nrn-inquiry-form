@@ -965,12 +965,12 @@ function buildInsight(D){
   /* ═══ ANGGARAN ═══ */
   const b = D.bCur;
   if(!b.est && !b.proj && !b.act){
-    put(A,'Anggaran',`Belum ada data anggaran ${insEsc(D.month)} sama sekali. Kemungkinan card Trello bulan ini belum diisi <code>Estimated Budget:</code> di deskripsi, dan checklist-nya belum diberi nominal <code>(Rp ...)</code>.`);
+    put(A,'Anggaran',`Belum ada data anggaran ${insEsc(D.month)} sama sekali. Budget yang disepakati belum diisi (kolom Budget → approve BOD), dan item proyeksi belum diberi nominal <code>(Rp ...)</code>.`);
   } else {
     if(!b.est && b.proj)
-      put(A,'Anggaran',`Rencana belanja ${fmtRp(b.proj)} sudah jalan, tapi <b>patokan awalnya (Budget) tidak pernah diisi</b> — jadi tidak ada pembanding untuk menilai rencana ini wajar atau tidak. Isi <code>Estimated Budget:</code> di deskripsi card.`);
+      put(A,'Anggaran',`Rencana belanja ${fmtRp(b.proj)} sudah jalan, tapi <b>Budget yang disepakati belum diisi</b> — jadi tidak ada pembanding untuk menilai rencana ini wajar atau tidak. Isi angka Budget di kolom Budget (→ approve BOD).`);
     if(b.est && b.proj > b.est*1.2)
-      put(W,'Anggaran',`Rencana terkini ${fmtRp(b.proj)} sudah ${insSg(insPct(b.proj-b.est,b.est))} di atas patokan awal ${fmtRp(b.est)} — rencananya membengkak, meski uangnya belum tentu keluar.`);
+      put(W,'Anggaran',`Rencana terkini ${fmtRp(b.proj)} sudah ${insSg(insPct(b.proj-b.est,b.est))} di atas budget yang disepakati ${fmtRp(b.est)} — rencananya membengkak, meski uangnya belum tentu keluar.`);
 
     // Aktual — bagian yang paling perlu bahasa manusia
     if(b.proj && !b.act){
@@ -1579,7 +1579,7 @@ async function unlockFinance(){
 let finOpenBN='';       // panel rincian terbuka: '' | 'est' | 'proj'
 let estModeBN='akhir';  // 'akhir' (bulan card berakhir) | 'sebar' (ikut sebaran checklist)
 
-// Estimasi per bulan sesuai cara hitung terpilih (sama logika dgn dashboard BOD).
+// Budget per bulan sesuai cara hitung terpilih (sama logika dgn dashboard BOD).
 function hitungEstMapBN(mode){
   const map={}; const add=(m,v)=>{ if(!m) return; map[m]=(map[m]||0)+v; };
   if(mode!=='sebar'){ (brandFin.estDetail||[]).forEach(d=>add(d.month, d.est||0)); return map; } // estDetail override-aware
@@ -1608,9 +1608,9 @@ function renderBrandFinance(){
 
   const infoIcon=t=>`<span class="info" tabindex="0">i<span class="tip">${t}</span></span>`;
   const TIP={
-    est:'Angka <b>besar/patokan</b> dari <b>Estimated Budget:</b> di deskripsi card Trello. Ini yang nanti <b>dipecah</b> jadi item checklist. Klik untuk lihat dari card mana saja.',
-    proj:'Hasil <b>memecah estimasi</b> jadi item konkret — nominal <b>(Rp ...)</b> di checklist. Idealnya jumlahnya <b>sama dgn Estimasi</b>. Klik untuk rincian per card.',
-    mode:'<b>Bulan card berakhir</b>: seluruh estimasi card ditaruh di bulan due-date-nya — mudah dilacak, tapi tidak sebanding dgn Proyeksi.<br><br><b>Ikut sebaran checklist</b>: estimasi dibagi ke bulan item checklist-nya, jadi sebanding. Total setahun sama.',
+    est:'Budget yang <b>sudah disepakati</b> per card — diusulkan di kolom Budget lalu <b>di-approve BOD</b> (tak perlu ke Trello). Ini yang <b>dipecah</b> jadi item proyeksi. Klik untuk rincian per card.',
+    proj:'Hasil <b>memecah budget</b> jadi item konkret — nominal <b>(Rp ...)</b> di checklist. Idealnya jumlahnya <b>sama dgn Budget</b>. Klik untuk rincian per card.',
+    mode:'<b>Bulan card berakhir</b>: seluruh budget card ditaruh di bulan due-date-nya — mudah dilacak, tapi tidak sebanding dgn Proyeksi.<br><br><b>Ikut sebaran checklist</b>: budget dibagi ke bulan item checklist-nya, jadi sebanding. Total setahun sama.',
   };
 
   // Per bulan (Est ikut mode terpilih)
@@ -1625,16 +1625,16 @@ function renderBrandFinance(){
     `<tr><td>${esc(d.month)}</td><td>${esc(d.card)}</td><td class="muted">${esc(d.subtask)}</td><td>${esc(d.deadline)||'—'}</td><td class="num">${fmtRp(d.nominal)}</td></tr>`
   ).join('')||'<tr><td colspan="5" class="muted-empty" style="text-align:center;padding:16px">Belum ada rincian.</td></tr>';
 
-  // Panel rincian Estimasi (per card)
+  // Panel rincian Budget (per card)
   const estDet=(brandFin.estDetail||[]).slice().sort((a,b)=>(b.est||0)-(a.est||0));
   const estDetTotal=estDet.reduce((s,d)=>s+(d.est||0),0);
   const eRows=estDet.map(d=>
     `<tr><td>${esc(d.card)||'—'}</td><td><b>${esc(d.month)||'—'}</b></td><td class="muted">${esc(d.list)||'—'}</td><td class="num">${fmtRp(d.est)}</td></tr>`
-  ).join('')||'<tr><td colspan="4" class="muted-empty" style="text-align:center;padding:16px">Belum ada card dengan Estimated Budget.</td></tr>';
+  ).join('')||'<tr><td colspan="4" class="muted-empty" style="text-align:center;padding:16px">Belum ada card dengan Budget.</td></tr>';
   const estPanel=finOpenBN!=='est'?'':`
     <div class="section-title">🔎 Rincian Budget — dari card mana saja</div>
-    <div class="note" style="margin:-4px 0 8px">Diambil dari <b>Estimated Budget:</b> di deskripsi tiap card Trello.</div>
-    <div class="tablewrap"><table><thead><tr><th>Card / Agenda</th><th>Bulan</th><th>List</th><th>Estimasi</th></tr></thead><tbody>${eRows}<tr><td colspan="3" style="text-align:right"><b>Total</b></td><td class="num"><b>${fmtRp(estDetTotal)}</b></td></tr></tbody></table></div>`;
+    <div class="note" style="margin:-4px 0 8px"><b>Budget yang disepakati</b> per card (kolom Budget → approve BOD).</div>
+    <div class="tablewrap"><table><thead><tr><th>Card / Agenda</th><th>Bulan</th><th>List</th><th>Budget</th></tr></thead><tbody>${eRows}<tr><td colspan="3" style="text-align:right"><b>Total</b></td><td class="num"><b>${fmtRp(estDetTotal)}</b></td></tr></tbody></table></div>`;
 
   // Panel rincian Proyeksi (per card)
   const pMap={}; detail.forEach(d=>{ const k=d.card+'|'+d.month;
@@ -1656,7 +1656,7 @@ function renderBrandFinance(){
     if(!p.est&&!p.proj) return {k:'kosong',  urut:4,label:'Belum ada angka',      warna:'var(--text3)'};
     if(!p.proj)         return {k:'belum',   urut:2,label:'Belum dirinci',        warna:'var(--red)'};
     if(sisa>tol)        return {k:'sebagian',urut:3,label:'Baru sebagian',        warna:'var(--amber)'};
-    if(sisa<-tol)       return {k:'lebih',   urut:0,label:'Melebihi estimasi',    warna:'var(--red)'};
+    if(sisa<-tol)       return {k:'lebih',   urut:0,label:'Melebihi budget',    warna:'var(--red)'};
     return                     {k:'pas',     urut:5,label:'Terpecah pas',         warna:'var(--green4)'}; };
   const pecahArr=Object.keys(pecahMap).map(k=>pecahMap[k]); pecahArr.forEach(p=>p.st=statusPecah(p));
   pecahArr.sort((a,b)=>a.st.urut-b.st.urut||(b.est||b.proj)-(a.est||a.proj));
@@ -1680,14 +1680,14 @@ function renderBrandFinance(){
   const chip=(k,label,warna)=> nPecah[k]?`<span class="chip" style="background:transparent;border:1px solid ${warna};color:${warna}">${label}: ${nPecah[k]}</span>`:'';
 
   const modeNote = estModeBN==='akhir'
-    ? `<div class="note" style="margin:-4px 0 8px;background:var(--gold-bg);border:1px solid #e8d49a;border-radius:8px;padding:8px 10px;color:var(--text2)">⚠️ <b>Selisih Est vs Proyeksi per bulan belum sebanding</b> — Estimasi dihitung penuh di bulan card berakhir, Proyeksi tersebar per item. Ganti ke <b>“Ikut sebaran checklist”</b> di atas, atau lihat perbandingan per card di tabel <b>🧩 Pecahan Budget</b>.</div>`
-    : `<div class="note" style="margin:-4px 0 8px">Estimasi dibagi ke bulan item checklist-nya, jadi <b>sebanding</b> dengan Proyeksi. Total setahun tetap sama.</div>`;
+    ? `<div class="note" style="margin:-4px 0 8px;background:var(--gold-bg);border:1px solid #e8d49a;border-radius:8px;padding:8px 10px;color:var(--text2)">⚠️ <b>Selisih Est vs Proyeksi per bulan belum sebanding</b> — Budget dihitung penuh di bulan card berakhir, Proyeksi tersebar per item. Ganti ke <b>“Ikut sebaran checklist”</b> di atas, atau lihat perbandingan per card di tabel <b>🧩 Pecahan Budget</b>.</div>`
+    : `<div class="note" style="margin:-4px 0 8px">Budget dibagi ke bulan item checklist-nya, jadi <b>sebanding</b> dengan Proyeksi. Total setahun tetap sama.</div>`;
 
   box.innerHTML=`
     <div class="section-title">💰 Finance — ${esc(auth.brand)} · ${brandFin.year}</div>
     <div class="note" style="margin:-4px 0 8px">Arahkan ke ikon <span class="info" tabindex="0">i</span> di tiap kartu untuk tahu arti &amp; sumbernya · klik kartu untuk rinciannya.</div>
     <div style="display:flex;align-items:center;gap:8px;margin:0 0 10px;flex-wrap:wrap">
-      <span class="note" style="margin:0">Estimasi per bulan ${infoIcon(TIP.mode)}</span>
+      <span class="note" style="margin:0">Budget per bulan ${infoIcon(TIP.mode)}</span>
       <select id="estModeBN" style="font-size:13px;padding:5px 8px;border:1.5px solid var(--cream2);border-radius:8px;background:var(--white)">
         <option value="akhir"${estModeBN==='akhir'?' selected':''}>Bulan card berakhir</option>
         <option value="sebar"${estModeBN==='sebar'?' selected':''}>Ikut sebaran checklist</option>
@@ -1695,16 +1695,16 @@ function renderBrandFinance(){
     </div>
     <div class="kpis">
       <div class="kpi klik${finOpenBN==='est'?' on':''}" id="estCardBN"><h3>Budget ${infoIcon(TIP.est)}</h3><div class="v num">${est?fmtRp(est):'<span class="lap-na">belum diisi</span>'}</div><div class="lihat">${finOpenBN==='est'?'▲ tutup rincian':'▼ klik lihat rincian'}</div></div>
-      <div class="kpi klik wait${finOpenBN==='proj'?' on':''}" id="projCardBN"><h3>Proyeksi (pecahan estimasi) ${infoIcon(TIP.proj)}</h3><div class="v num">${proj?fmtRp(proj):'<span class="lap-na">belum ada</span>'}</div>${est?`<div class="bar"><i class="${dirinciPct>100?'over':(dirinciPct<50?'low':'')}" style="width:${Math.min(dirinciPct,100)}%"></i></div><div class="vsub muted">${dirinciPct}% dari estimasi sudah dirinci${dirinciPct<100?` · sisa ${fmtRp(Math.max(0,est-proj))}`:''}</div>`:''}<div class="lihat">${finOpenBN==='proj'?'▲ tutup rincian':'▼ klik lihat rincian'}</div></div>
+      <div class="kpi klik wait${finOpenBN==='proj'?' on':''}" id="projCardBN"><h3>Proyeksi (pecahan budget) ${infoIcon(TIP.proj)}</h3><div class="v num">${proj?fmtRp(proj):'<span class="lap-na">belum ada</span>'}</div>${est?`<div class="bar"><i class="${dirinciPct>100?'over':(dirinciPct<50?'low':'')}" style="width:${Math.min(dirinciPct,100)}%"></i></div><div class="vsub muted">${dirinciPct}% dari budget sudah dirinci${dirinciPct<100?` · sisa ${fmtRp(Math.max(0,est-proj))}`:''}</div>`:''}<div class="lihat">${finOpenBN==='proj'?'▲ tutup rincian':'▼ klik lihat rincian'}</div></div>
       <div class="kpi"><h3>Budget Aktual</h3><div class="v num">${act?fmtRp(act):'<span class="lap-na">belum terupdate</span>'}</div></div>
     </div>
     ${estPanel}${projPanel}
     <div class="section-title">🧩 Pecahan Budget — sudah dirinci berapa?</div>
     <div class="note" style="margin:-4px 0 8px"><b>Proyeksi adalah pecahan dari Budget yang disepakati.</b> Ajukan/revisi angka <b>Budget</b> langsung di kolom Budget (tak perlu ke Trello) → berlaku setelah <b>di-approve BOD</b>. Proyeksi dipecah jadi item bernominal <code>(Rp ...)</code>; kalau semua sudah dirinci, jumlah pecahan = Budget.</div>
     <div class="statrow" style="margin-bottom:8px">
-      ${chip('lebih','⚠ Melebihi estimasi','var(--red)')}${chip('belum','● Belum dirinci','var(--red)')}${chip('noest','◐ Budget belum diisi','var(--amber)')}${chip('sebagian','◐ Baru sebagian','var(--amber)')}${chip('pas','✓ Terpecah pas','var(--green4)')}${chip('kosong','○ Belum ada angka','var(--text3)')}
+      ${chip('lebih','⚠ Melebihi budget','var(--red)')}${chip('belum','● Belum dirinci','var(--red)')}${chip('noest','◐ Budget belum diisi','var(--amber)')}${chip('sebagian','◐ Baru sebagian','var(--amber)')}${chip('pas','✓ Terpecah pas','var(--green4)')}${chip('kosong','○ Belum ada angka','var(--text3)')}
     </div>
-    <div class="tablewrap"><table><thead><tr><th>Card / Agenda</th><th>Bulan</th><th>Estimasi</th><th>Sudah dirinci</th><th>Sisa</th><th>Kelengkapan</th><th>Status</th></tr></thead><tbody>${pecahRows}</tbody></table></div>
+    <div class="tablewrap"><table><thead><tr><th>Card / Agenda</th><th>Bulan</th><th>Budget</th><th>Sudah dirinci</th><th>Sisa</th><th>Kelengkapan</th><th>Status</th></tr></thead><tbody>${pecahRows}</tbody></table></div>
     <div class="section-title">📅 Per Bulan</div>
     ${modeNote}
     <div class="tablewrap"><table><thead><tr><th>Bulan</th><th>Budget</th><th>Proyeksi</th><th>Aktual</th></tr></thead><tbody>${mRows}</tbody></table></div>
@@ -1915,7 +1915,7 @@ function lapAnggaranNote(R, month, nextM){
     else if(b.act&&!b.proj) t.push('Ada pengeluaran '+fmtRp(b.act)+' tanpa rencana tercatat.');
   }
   if(!R.bNext.proj) t.push('Rencana '+nextM+' belum ada.');
-  t.push('<b>Estimasi</b> = patokan awal dari deskripsi card · <b>Proyeksi</b> = rencana terkini dari nominal di checklist · <b>Aktual</b> = realisasi.');
+  t.push('<b>Budget</b> = budget yang disepakati dari deskripsi card · <b>Proyeksi</b> = rencana terkini dari nominal di checklist · <b>Aktual</b> = realisasi.');
   return '<div class="note">'+t.join(' ')+'</div>';
 }
 
