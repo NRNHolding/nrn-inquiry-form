@@ -102,8 +102,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
 .agtl-empty{font-size:12px;color:var(--text3);padding:16px;text-align:center}
 /* Agenda List editable — muat penuh tanpa geser */
 .agedit table{width:100%;font-size:12px;table-layout:fixed}
-.agedit th,.agedit td{padding:6px 7px;vertical-align:middle}
-.agedit td.sub,.agedit th.sub{white-space:normal;word-break:break-word}
+.agedit th,.agedit td{padding:6px 7px;vertical-align:middle;white-space:normal;word-break:break-word;overflow-wrap:anywhere;line-height:1.35}
 .agedit .ag-dl{width:100%;max-width:128px;font-size:11.5px;padding:3px 4px;border:1px solid var(--cream2);border-radius:6px;background:var(--white)}
 .agedit .ag-nom{width:100%;max-width:96px;font-size:11.5px;padding:3px 5px;border:1px solid var(--cream2);border-radius:6px;background:var(--white);text-align:right}
 .agedit .ag-st{width:100%;font-size:11.5px;padding:3px 4px;border:1px solid var(--cream2);border-radius:6px;background:var(--white)}
@@ -1389,7 +1388,7 @@ function renderBrandAgenda(){
     body=`<div class="note" style="margin:6px 0">✎ Edit <b>tanggal</b>, <b>nominal (Rp)</b>, <b>status</b> beberapa baris sekaligus → klik <b>Simpan Semua</b>. Langsung berlaku (mengalahkan Trello).</div>
       <div class="agbar"><button class="btn btn-gold" id="agSaveAll" disabled>💾 Simpan Semua</button><span class="dirtycount" id="agDirty"></span><button class="tab" id="agResetEdit" style="display:none">↺ Batalkan perubahan</button></div>
       <div class="agedit"><table>
-        <colgroup><col style="width:19%"><col style="width:33%"><col style="width:16%"><col style="width:14%"><col style="width:9%"><col style="width:13%"></colgroup>
+        <colgroup><col style="width:23%"><col style="width:30%"><col style="width:15%"><col style="width:12%"><col style="width:8%"><col style="width:12%"></colgroup>
         <thead><tr><th>Card / Agenda</th><th class="sub">Subtask</th><th>Deadline</th><th>Nominal (Rp)</th><th>Sisa</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   } else { body=renderAgendaCalendar(det); }
   box.innerHTML=head+body;
