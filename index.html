@@ -127,6 +127,20 @@ tbody tr.aging:hover{background:#f3d5d5}
 .pill.wait{background:var(--amber-bg);color:var(--amber)}
 .pill.cancel{background:var(--red-bg);color:var(--red)}
 .pill.sampling{background:var(--purple-bg);color:var(--purple)}
+/* Tabel inquiry: kompak supaya 13 kolom muat tanpa geser */
+#listTable{font-size:11.5px}
+#listTable th,#listTable td{padding:6px 7px;white-space:normal;word-break:break-word}
+#listTable .num{white-space:nowrap}
+/* Dropdown status inline di tabel inquiry — berwarna seperti pill */
+.inq-st{font-size:11px;font-weight:700;padding:3px 6px;border-radius:999px;border:1.5px solid transparent;
+  cursor:pointer;max-width:150px;appearance:none;-webkit-appearance:none;text-align:center;
+  background-image:none;transition:filter .12s}
+.inq-st:hover{filter:brightness(.95)}
+.inq-st:disabled{opacity:.55;cursor:wait}
+.inq-st.st-quotation{background:var(--gold-bg);color:var(--amber);border-color:#e8d49a}
+.inq-st.st-sampling{background:var(--purple-bg);color:var(--purple);border-color:#cbb8e6}
+.inq-st.st-deal{background:var(--green-bg);color:var(--green4);border-color:#bfe0cc}
+.inq-st.st-cancel{background:var(--red-bg);color:var(--red);border-color:#e8b9b9}
 /* Insight otomatis */
 .ins-box{background:var(--white);border:1.5px solid var(--cream2);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
 .ins-head{font-weight:700;font-size:13px;margin-bottom:12px;color:var(--text2)}
@@ -337,12 +351,12 @@ table thead th{cursor:pointer;user-select:none}.sort-ind{opacity:.55;font-size:.
       </div>
       <div class="tablewrap">
         <table id="listTable">
-          <thead><tr><th>Tanggal</th><th>Customer</th><th>Produk</th><th>Kategori</th><th>Jenis</th><th>Deadline</th><th>Referral</th><th>Est. Nominal</th><th>Via</th><th>Status</th><th>Tgl Quotation</th><th>Tgl Sampling</th><th>Tgl Deal</th><th>Tgl Cancel</th><th>PIC</th><th>Aksi</th></tr></thead>
+          <thead><tr><th>Tanggal</th><th>Customer</th><th>Status</th><th>Produk</th><th>Kategori</th><th>Jenis</th><th>Deadline</th><th>Referral</th><th>Est. Nominal</th><th>Via</th><th>Update Terakhir</th><th>PIC</th><th>Aksi</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
-      <div class="note">🔥 Baris merah = Quotation / sampling yang sudah &gt; 7 hari belum closing — perlu di-follow up.<br>
-        Kolom <b>Tgl Quotation / Sampling / Deal / Cancel</b> terisi otomatis saat status pertama kali masuk tahap itu, dan tidak berubah lagi (jejak timeline).</div>
+      <div class="note">✎ Ubah <b>Status</b> langsung dari dropdown di kolom ke-3 — otomatis tersimpan, tak perlu buka Edit.<br>
+        🔥 Baris merah = Quotation / sampling yang sudah &gt; 7 hari belum closing — perlu di-follow up. Kolom <b>Update Terakhir</b> = tahap terakhir &amp; tanggalnya (riwayat lengkap ada di tombol Edit).</div>
     </div>
 
     <!-- View: Customer database -->
@@ -661,7 +675,7 @@ function applyFilters(){
 function drawList(rows){
   const tb = $('listTable').querySelector('tbody'); tb.innerHTML='';
   if(!rows.length){
-    tb.innerHTML = '<tr><td colspan="16" class="muted-empty">Belum ada inquiry yang cocok.</td></tr>'; return;
+    tb.innerHTML = '<tr><td colspan="13" class="muted-empty">Belum ada inquiry yang cocok.</td></tr>'; return;
   }
   rows.forEach((x)=>{
     const i = currentList.indexOf(x);
@@ -676,17 +690,66 @@ function drawList(rows){
     const webTag = isWeb ? ' <span class="pill" style="background:#ede9fe;color:#5b21b6;font-size:9px" title="Dari website revolt-web'+(x.webStatus?' · status asli: '+esc(x.webStatus):'')+'">🌐 web</span>' : '';
     const aksi = isWeb ? '<span class="muted-empty" title="Kelola di admin revolt-web">🌐 read-only</span>'
                        : `<button class="iconbtn" data-edit="${i}">✎ Edit</button>`;
-    tr.innerHTML = `<td>${esc(x.timestamp)||'—'}</td><td>${esc(x.customer)||'—'}${webTag}</td><td>${esc(x.product)||'—'}</td>
+    // Status: dropdown inline (langsung simpan). Baris dari web tetap read-only.
+    const stCell = isWeb
+      ? `${statusPill(x.status||'')}${ageBadge}`
+      : `<select class="inq-st st-${k}" data-idx="${i}">${
+          ['quotation','sampling','deal','cancel'].map(key=>
+            `<option value="${ST_LABEL[key]}"${key===k?' selected':''}>${ST_LABEL[key]}</option>`).join('')
+        }</select>${ageBadge}`;
+    // Update terakhir: tahap terakhir + tanggalnya (gabungan 4 kolom tanggal)
+    const last = insLastStep(x);
+    const lastCell = last
+      ? `<span class="muted" style="font-size:11px">${esc(last.nama)} · ${esc(last.tgl)}</span>`
+      : '<span class="muted-empty">—</span>';
+    tr.innerHTML = `<td>${esc(x.timestamp)||'—'}</td><td>${esc(x.customer)||'—'}${webTag}</td>
+      <td>${stCell}</td>
+      <td>${esc(x.product)||'—'}</td>
       <td>${esc(x.kategori)||'—'}</td><td>${jenisTag(x.jenisInquiry)}</td><td>${esc(x.tanggalAcara)||'—'}</td><td>${esc(x.referral)||'—'}</td>
       <td class="num">${fmtRp(x.nominal)}</td><td>${esc(x.contactVia)||'—'}</td>
-      <td>${statusPill(x.status||'')}${ageBadge}</td>
-      <td>${esc(x.tglQuotation)||'—'}</td><td>${esc(x.tglSampling)||'—'}</td>
-      <td>${esc(x.tglDeal)||'—'}</td><td>${esc(x.tglCancel)||'—'}</td>
+      <td>${lastCell}</td>
       <td>${esc(x.salesPic)||'—'}</td>
       <td>${aksi}</td>`;
     tb.appendChild(tr);
   });
   tb.querySelectorAll('[data-edit]').forEach(b=> b.onclick = ()=> openEdit(+b.dataset.edit));
+  tb.querySelectorAll('.inq-st').forEach(sel=>{
+    sel.dataset.prev = sel.value;                 // untuk rollback bila gagal/batal
+    sel.onchange = ()=> changeInquiryStatus(sel);
+  });
+}
+/* Ubah status langsung dari dropdown di tabel (tanpa buka modal).
+   Cancel wajib alasan → diminta lewat prompt, sesuai aturan backend. */
+async function changeInquiryStatus(sel){
+  const i = +sel.dataset.idx, x = currentList[i];
+  if(!x){ return; }
+  const baru = sel.value, lama = sel.dataset.prev;
+  if(baru === lama) return;
+  const payload = { type:'inquiryUpdate', brand:auth.brand, password:auth.password,
+                    row:x.row, status:baru };
+  if(statusKey_(baru)==='cancel'){
+    const sudah = String(x.alasanCancel||'').trim();
+    const alasan = prompt('Alasan cancel untuk "'+(x.customer||'')+'":', sudah);
+    if(alasan===null || !alasan.trim()){          // batal / kosong → kembalikan
+      sel.value = lama; toast('Dibatalkan — alasan cancel wajib diisi.', true); return;
+    }
+    payload.alasanCancel = alasan.trim();
+  }
+  sel.disabled = true;
+  try{
+    const r = await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify(payload)});
+    const j = await r.json();
+    if(j.success){
+      // update state lokal supaya pill/warna & Update Terakhir langsung benar
+      x.status = baru; if(payload.alasanCancel) x.alasanCancel = payload.alasanCancel;
+      sel.dataset.prev = baru;
+      toast('✅ Status → '+baru);
+      refresh();                                   // tarik ulang (tanggal tahap diisi server)
+    } else {
+      sel.value = lama; toast('Gagal: '+(j.error||''), true);
+    }
+  }catch(e){ sel.value = lama; toast('Gagal terhubung ke server.', true); }
+  finally{ sel.disabled = false; }
 }
 $('qSearch').oninput = applyFilters;
 $('qStatus').onchange = applyFilters;
