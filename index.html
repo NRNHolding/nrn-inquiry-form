@@ -107,6 +107,54 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
 .agedit .ag-nom{width:100%;max-width:96px;font-size:11.5px;padding:3px 5px;border:1px solid var(--cream2);border-radius:6px;background:var(--white);text-align:right}
 .agedit .ag-st{width:100%;font-size:11.5px;padding:3px 4px;border:1px solid var(--cream2);border-radius:6px;background:var(--white)}
 .agedit tr.dirty td{background:#fffaeb}
+/* ── Papan (kanban per bulan, mengikuti list board brand) ── */
+.papan{display:flex;gap:9px;align-items:flex-start;overflow-x:auto;padding:4px 2px 8px}
+.papan .pcol{flex:0 0 258px;background:var(--cream);border:1px solid var(--cream2);border-radius:12px;display:flex;flex-direction:column;max-height:62vh}
+.papan .pcol.quiet{flex:0 0 96px;background:transparent}
+.papan .pcol.now{box-shadow:0 0 0 1px var(--gold)}
+.papan .pcol.over{background:var(--green-bg);border-color:var(--green4);border-style:dashed;flex-basis:258px}
+.papan .phd{padding:8px 10px 7px;border-bottom:1px solid var(--cream2)}
+.papan .phd b{font-size:12px;letter-spacing:.01em}
+.papan .phd .n{font-size:11px;color:var(--text3);margin-left:5px}
+.papan .phd .s{display:block;font-size:10.5px;color:var(--text3);margin-top:3px}
+.papan .pstack{padding:7px;display:flex;flex-direction:column;gap:6px;overflow-y:auto;flex:1;min-height:48px}
+.papan .pempty{font-size:10.5px;color:var(--text3);text-align:center;padding:10px 4px;font-style:italic;border:1px dashed var(--cream2);border-radius:8px}
+.ptile{background:var(--white);border:1px solid var(--cream2);border-radius:9px;cursor:grab;text-align:left;padding:9px 10px;width:100%;font:inherit;color:inherit;display:block;box-shadow:0 1px 3px rgba(35,40,30,.06)}
+.ptile:hover{border-color:var(--gold)}
+.ptile.dragging{opacity:.4}
+.ptile .t{font-weight:700;font-size:12.5px;margin-bottom:4px;word-break:break-word}
+.ptile .p{font-size:10px;color:var(--text3);margin-bottom:5px}
+.ptile .bs{display:flex;flex-wrap:wrap;gap:3px}
+.pb{font-size:9.5px;font-weight:700;padding:2px 5px;border-radius:4px;background:var(--cream);color:var(--text2);white-space:nowrap}
+.pb.w{background:var(--gold-bg);color:var(--amber)}
+.pb.b{background:var(--red-bg);color:var(--red)}
+.pb.g{background:var(--green-bg);color:var(--green4)}
+.pb.e{background:var(--purple-bg);color:var(--purple)}
+/* drawer */
+.pscrim{position:fixed;inset:0;background:rgba(20,18,13,.5);z-index:60}
+.pdraw{position:fixed;top:0;right:0;bottom:0;width:min(560px,100%);background:var(--white);z-index:61;display:flex;flex-direction:column;border-left:1px solid var(--cream2)}
+.pdraw .h{padding:13px 16px 11px;border-bottom:1px solid var(--cream2);display:flex;gap:10px;align-items:flex-start}
+.pdraw .h h3{margin:0;font-size:16px;word-break:break-word}
+.pdraw .h .eb{font-size:10px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px}
+.pdraw .x{background:none;border:0;cursor:pointer;color:var(--text3);font-size:19px;line-height:1;padding:2px 5px}
+.pdraw .b{overflow-y:auto;flex:1;padding:14px 16px 20px}
+.pdraw .f{padding:10px 16px;border-top:1px solid var(--cream2);display:flex;gap:8px;align-items:center}
+.psec{margin-bottom:16px}
+.psec>.l{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--amber);margin-bottom:7px;display:flex;align-items:center;gap:8px}
+.psec>.l .sp{flex:1}
+.prow{border:1px solid var(--cream2);border-radius:9px;background:var(--cream);padding:7px 8px;margin-bottom:6px}
+.prow.warn{border-color:var(--gold)}
+.prow .g1{display:grid;grid-template-columns:1fr 122px 100px 118px 24px;gap:5px;align-items:center}
+.prow input,.prow select{padding:5px 7px;border:1px solid var(--cream2);border-radius:7px;background:var(--white);color:var(--text);font-size:12px;width:100%}
+.prow input.rp{text-align:right}
+.prow .del{background:none;border:0;color:var(--text3);cursor:pointer;font-size:15px;padding:0}
+.prow .del:hover{color:var(--red)}
+.prow .gen{margin-top:5px;font-size:10px;color:var(--text3);word-break:break-word}
+.prow .gen code{background:var(--white);padding:1px 4px;border-radius:4px}
+.pchips{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
+.pchip{background:var(--cream);border:1px solid var(--cream2);border-radius:999px;cursor:pointer;font-size:10.5px;font-weight:700;color:var(--text2);padding:3px 9px}
+.pchip:hover{border-color:var(--gold);color:var(--text)}
+@media(max-width:640px){.prow .g1{grid-template-columns:1fr 1fr;gap:5px}.papan .pcol{flex-basis:230px}}
 .agbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0}
 .agbar .btn-gold{padding:7px 16px}
 .agbar .dirtycount{font-size:12px;color:var(--amber);font-weight:600}
@@ -1435,9 +1483,11 @@ function renderBrandAgenda(){
       <button class="tab ${agendaViewMode==='list'?'active':''}" id="agViewList">📋 List</button>
       <button class="tab ${agendaViewMode==='calendar'?'active':''}" id="agViewCal">📅 Kalender</button>
       <button class="tab ${agendaViewMode==='timeline'?'active':''}" id="agViewTl">📊 Timeline</button>
+      <button class="tab ${agendaViewMode==='papan'?'active':''}" id="agViewPapan">🗂 Papan</button>
     </div>`;
   let body;
   if(agendaViewMode==='timeline'){ body=renderAgendaTimeline(det); }
+  else if(agendaViewMode==='papan'){ body=renderAgendaPapan(det); }
   else if(agendaViewMode==='list'){
     const stOpt=(sel)=>['Task Created','Checklist Created','In Progress','Done'].map(s=>`<option ${agStatusLabel(sel)===agStatusLabel(s)?'selected':''}>${s}</option>`).join('');
     const rows=det.length?det.map((x)=>{
@@ -1458,9 +1508,11 @@ function renderBrandAgenda(){
   } else { body=renderAgendaCalendar(det); }
   box.innerHTML=head+body;
   if(agendaViewMode==='list') wireAgendaBulk(box);
+  if(agendaViewMode==='papan') wireAgendaPapan();
   $('agViewList').onclick=()=>{agendaViewMode='list';renderBrandAgenda();};
   $('agViewCal').onclick=()=>{agendaViewMode='calendar';renderBrandAgenda();};
   $('agViewTl').onclick=()=>{agendaViewMode='timeline';renderBrandAgenda();};
+  $('agViewPapan').onclick=()=>{agendaViewMode='papan';renderBrandAgenda();};
   if(agendaViewMode==='calendar'||agendaViewMode==='timeline'){
     const p=$('calPrev'), n=$('calNext');
     if(p) p.onclick=()=>{calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderBrandAgenda();};
@@ -1473,6 +1525,288 @@ function renderBrandAgenda(){
     if($('agYrNext'))  $('agYrNext').onclick =()=>{calYear++;renderBrandAgenda();};
   }
 }
+/* ═══ Papan — kanban per bulan, mengikuti list board brand ═══ */
+const PAPAN_MON=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+const PAPAN_ST=['Task Created','Checklist Created','In Progress','Done'];
+let papanData=null, papanOpen=null, papanDrag=null;
+
+function papanBuild(det){
+  const map={};
+  (det||[]).forEach(x=>{
+    const key=String(x.card||'(tanpa card)');
+    if(!map[key]) map[key]={card:key, bulan:String(x.bulan||''), bulan0:String(x.bulan||''), pic:String(x.pic||''), rows:[]};
+    if(!map[key].bulan && x.bulan){ map[key].bulan=String(x.bulan); map[key].bulan0=String(x.bulan); }
+    if(!map[key].pic && x.pic) map[key].pic=String(x.pic);
+    const sub=String(x.subtask||''), dl=String(x.deadlineISO||''), nom=Number(x.nominal)||0, st=agStatusLabel(x.status);
+    map[key].rows.push({sub:sub,sub0:sub,dl:dl,dl0:dl,nom:nom,nom0:nom,st:st,st0:st,baru:false});
+  });
+  return Object.keys(map).map(k=>map[k]);
+}
+const papanRowDirty=r=>!!(r.baru||r.sub!==r.sub0||r.dl!==r.dl0||Number(r.nom)!==Number(r.nom0)||r.st!==r.st0);
+const papanCardDirty=c=>!!(c.bulan!==c.bulan0||c.rows.some(papanRowDirty));
+const papanDirtyN=()=>(papanData||[]).reduce((n,c)=>n+(papanCardDirty(c)?1:0),0);
+function papanEst(card,bulan){
+  const d=((brandFin&&brandFin.estDetail)||[]).find(e=>String(e.card)===String(card)&&(!bulan||String(e.month)===String(bulan)));
+  return d?Number(d.est)||0:0;
+}
+function papanSisa(iso){
+  if(!iso) return null;
+  const p=iso.split('-').map(Number), t=new Date(); t.setHours(0,0,0,0);
+  return Math.round((new Date(p[0],p[1]-1,p[2])-t)/86400000);
+}
+function papanNama(sub,iso,nom){
+  const tag=iso?('['+iso.slice(8,10)+' '+iso.slice(5,7)+'] - '):'';
+  return tag+(sub||'')+(Number(nom)>0?(' (Rp '+fmtNum(nom)+')'):'');
+}
+function papanRp(s){
+  const t=String(s||'').trim(); if(!t) return 0;
+  const m=t.match(/^([0-9][0-9.,]*)\s*(jt|juta|rb|ribu|k|miliar|milyar|m)?$/i);
+  if(m && m[2]){
+    const mult={jt:1e6,juta:1e6,rb:1e3,ribu:1e3,k:1e3,m:1e9,miliar:1e9,milyar:1e9}[m[2].toLowerCase()]||1;
+    return Math.round((parseFloat(m[1].replace(/\./g,'').replace(',','.'))||0)*mult);
+  }
+  return Number(t.replace(/[^0-9]/g,''))||0;
+}
+
+function papanTile(c,i){
+  const tot=c.rows.length, done=c.rows.filter(r=>r.st==='Done').length;
+  const nonom=c.rows.filter(r=>!(Number(r.nom)>0)).length;
+  const telat=c.rows.filter(r=>{const s=papanSisa(r.dl);return r.st!=='Done'&&s!==null&&s<0;}).length;
+  const est=papanEst(c.card,c.bulan), pro=c.rows.reduce((s,r)=>s+(Number(r.nom)||0),0);
+  return '<button class="ptile" draggable="true" data-pt="'+i+'">'
+    +'<span class="t">'+esc(c.card)+'</span>'
+    +(c.pic?'<span class="p">'+esc(c.pic)+'</span>':'')
+    +'<span class="bs">'
+    +'<span class="pb '+(tot&&done===tot?'g':'')+'">'+done+'/'+tot+' selesai</span>'
+    +'<span class="pb '+(est?(pro>est?'b':''):'w')+'">'+(est?(fmtRp(pro)+' / '+fmtRp(est)):'budget kosong')+'</span>'
+    +(nonom?'<span class="pb w">'+nonom+' tanpa nominal</span>':'')
+    +(telat?'<span class="pb b">'+telat+' lewat</span>':'')
+    +(papanCardDirty(c)?'<span class="pb e">diubah</span>':'')
+    +'</span></button>';
+}
+function papanBoardHtml(){
+  const kini=PAPAN_MON[new Date().getMonth()];
+  const adaTanpa=(papanData||[]).some(c=>!c.bulan);
+  const cols=PAPAN_MON.concat(adaTanpa?['(tanpa bulan)']:[]);
+  return cols.map(M=>{
+    const list=[]; (papanData||[]).forEach((c,i)=>{ if((c.bulan||'(tanpa bulan)')===M) list.push([c,i]); });
+    const quiet=!list.length && M!=='(tanpa bulan)';
+    const pro=list.reduce((s,p)=>s+p[0].rows.reduce((a,r)=>a+(Number(r.nom)||0),0),0);
+    return '<section class="pcol'+(quiet?' quiet':'')+(M===kini?' now':'')+'" data-pcol="'+esc(M)+'">'
+      +'<div class="phd"><b>'+esc(M)+'</b><span class="n">'+list.length+'</span>'
+      +(quiet?'':'<span class="s">'+fmtRp(pro)+'</span>')+'</div>'
+      +'<div class="pstack">'+(list.map(p=>papanTile(p[0],p[1])).join('')
+        ||'<div class="pempty">seret ke sini</div>')+'</div></section>';
+  }).join('');
+}
+function renderAgendaPapan(det){
+  if(!papanData) papanData=papanBuild(det);
+  return '<div class="note" style="margin:6px 0">🗂 Kolom mengikuti list bulan di board Trello brand. '
+    +'<b>Seret kartu</b> antar bulan untuk menjadwalkan ulang, <b>klik kartu</b> untuk mengisi tanggal, nominal, dan status tiap subtask. '
+    +'Langsung berlaku (mengalahkan Trello).</div>'
+    +'<div class="agbar"><button class="btn btn-gold" id="pSave" disabled>💾 Simpan Semua</button>'
+    +'<span class="dirtycount" id="pDirty"></span>'
+    +'<button class="tab" id="pReset" style="display:none">↺ Batalkan perubahan</button></div>'
+    +'<div class="papan" id="papanBoard">'+papanBoardHtml()+'</div><div id="pDrawHost"></div>';
+}
+function papanRefreshDock(){
+  const b=$('pSave'), c=$('pDirty'), r=$('pReset'); if(!b) return;
+  const n=papanDirtyN();
+  b.disabled=n===0; c.textContent=n?(n+' kartu diubah'):''; r.style.display=n?'':'none';
+}
+function papanRedraw(){
+  const board=$('papanBoard'); if(!board) return;
+  board.innerHTML=papanBoardHtml();
+  papanRefreshDock();
+}
+
+function papanRowHtml(r,idx){
+  const s=papanSisa(r.dl), warn=!r.dl||!(Number(r.nom)>0);
+  return '<div class="prow'+(warn?' warn':'')+'" data-pr="'+idx+'">'
+    +'<div class="g1">'
+    +'<input class="ps" value="'+esc(r.sub)+'" placeholder="Nama subtask">'
+    +'<input class="pd" type="date" value="'+esc(r.dl)+'">'
+    +'<input class="pn rp" value="'+(Number(r.nom)>0?fmtNum(r.nom):'')+'" placeholder="0">'
+    +'<select class="pst">'+PAPAN_ST.map(o=>'<option'+(o===r.st?' selected':'')+'>'+o+'</option>').join('')+'</select>'
+    +'<button class="del" data-pdel="'+idx+'" title="Hapus baris">&times;</button>'
+    +'</div>'
+    +'<div class="gen">akan ditulis: <code>'+esc(papanNama(r.sub,r.dl,r.nom))+'</code>'
+    +(s===null?' · tanpa tanggal':(' · '+(s<0?((-s)+' hari lewat'):(s+' hari lagi'))))+'</div>'
+    +'</div>';
+}
+function papanDrawHtml(c){
+  const est=papanEst(c.card,c.bulan), pro=c.rows.reduce((s,r)=>s+(Number(r.nom)||0),0);
+  return '<div class="pscrim" data-pclose></div><aside class="pdraw" role="dialog" aria-modal="true">'
+    +'<div class="h"><div style="flex:1;min-width:0"><div class="eb">'+esc(auth.brand)+' · list '+esc(c.bulan||'tanpa bulan')+'</div>'
+    +'<h3>'+esc(c.card)+'</h3></div><button class="x" data-pclose>&times;</button></div>'
+    +'<div class="b">'
+    +'<div class="psec"><div class="l">Bulan (list Trello)</div>'
+    +'<select id="pMon" style="padding:6px 9px;border:1px solid var(--cream2);border-radius:8px;background:var(--white);color:var(--text);font-size:12.5px">'
+    +PAPAN_MON.map(m=>'<option'+(m===c.bulan?' selected':'')+'>'+m+'</option>').join('')+'</select>'
+    +'<div class="muted" style="font-size:11px;margin-top:5px">Mengubah ini menggeser semua tanggal subtask sebanyak selisih bulannya.</div></div>'
+    +'<div class="psec"><div class="l">Budget disepakati</div>'
+    +'<div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">'
+    +'<input id="pBud" value="'+(est?fmtNum(est):'')+'" placeholder="1,5jt / 500rb / 1.500.000" '
+    +'style="width:190px;text-align:right;padding:6px 9px;border:1px solid var(--cream2);border-radius:8px;background:var(--white);color:var(--text);font-size:12.5px">'
+    +'<button class="btn" id="pBudGo">Ajukan ke BOD</button>'
+    +'<button class="pchip" id="pBagi">Bagi rata ke '+c.rows.length+' subtask</button></div>'
+    +'<div class="muted" id="pMeter" style="font-size:11px;margin-top:6px">'
+    +(est?('Proyeksi <b>'+fmtRp(pro)+'</b> dari '+fmtRp(est)+' · '+Math.round(pro/est*100)+'%')
+        :('Budget belum diisi — proyeksi '+fmtRp(pro)+' tidak punya pembanding'))
+    +'</div></div>'
+    +'<div class="psec"><div class="l">Checklist · '+c.rows.length+' baris<span class="sp"></span>'
+    +'<button class="pchip" id="pPaste">Tempel dari Trello</button>'
+    +'<button class="pchip" id="pAdd">+ Baris</button></div>'
+    +'<div class="pchips"><button class="pchip" data-pb="7">Semua +7 hari</button>'
+    +'<button class="pchip" data-pb="30">Semua +1 bulan</button>'
+    +'<button class="pchip" data-pb="eom">Semua ke akhir bulan</button></div>'
+    +'<div id="pRows">'+c.rows.map((r,i)=>papanRowHtml(r,i)).join('')+'</div>'
+    +'<div class="muted" style="font-size:11px;margin-top:7px">Nominal menerima <b>1,5jt</b>, <b>500rb</b>, atau <b>1.500.000</b>.</div>'
+    +'</div></div>'
+    +'<div class="f"><button class="btn" data-pclose>Tutup</button><span style="flex:1"></span>'
+    +'<button class="btn btn-gold" id="pDone">Selesai</button></div></aside>';
+}
+function papanOpenCard(i){
+  const c=(papanData||[])[i]; if(!c) return;
+  papanOpen=i;
+  $('pDrawHost').innerHTML=papanDrawHtml(c);
+  papanWireDraw(c);
+}
+function papanCloseDraw(){ papanOpen=null; const h=$('pDrawHost'); if(h) h.innerHTML=''; papanRedraw(); }
+function papanRefreshMeter(c){
+  const m=$('pMeter'); if(!m) return;
+  const bud=$('pBud');
+  const est=(bud?papanRp(bud.value):0)||papanEst(c.card,c.bulan);
+  const pro=c.rows.reduce((s,r)=>s+(Number(r.nom)||0),0);
+  m.innerHTML=est?('Proyeksi <b>'+fmtRp(pro)+'</b> dari '+fmtRp(est)+' · '+Math.round(pro/est*100)+'%')
+                 :('Budget belum diisi — proyeksi '+fmtRp(pro)+' tidak punya pembanding');
+}
+function papanRefreshRows(c){
+  const box=$('pRows'); if(!box) return;
+  box.innerHTML=c.rows.map((r,i)=>papanRowHtml(r,i)).join('');
+  papanWireRows(c); papanRefreshMeter(c); papanRefreshDock();
+}
+function papanWireRows(c){
+  const box=$('pRows'); if(!box) return;
+  box.querySelectorAll('[data-pr]').forEach(el=>{
+    const r=c.rows[+el.dataset.pr]; if(!r) return;
+    const gen=el.querySelector('.gen code');
+    const upd=()=>{ gen.textContent=papanNama(r.sub,r.dl,r.nom); papanRefreshDock(); };
+    el.querySelector('.ps').oninput=e=>{ r.sub=e.target.value; upd(); };
+    el.querySelector('.pd').onchange=e=>{ r.dl=e.target.value; papanRefreshRows(c); };
+    el.querySelector('.pst').onchange=e=>{ r.st=e.target.value; papanRefreshDock(); };
+    el.querySelector('.pn').onblur=e=>{ const v=papanRp(e.target.value); r.nom=v;
+      e.target.value=v?fmtNum(v):''; upd(); papanRefreshMeter(c); };
+  });
+  box.querySelectorAll('[data-pdel]').forEach(b=>b.onclick=()=>{
+    c.rows.splice(+b.dataset.pdel,1); papanRefreshRows(c);
+  });
+}
+function papanGeserBulan(c, ke){
+  const from=PAPAN_MON.indexOf(c.bulan), to=PAPAN_MON.indexOf(ke);
+  c.bulan=ke;
+  if(from<0||to<0) return;
+  const d=to-from;
+  c.rows.forEach(r=>{ if(!r.dl) return;
+    const p=r.dl.split('-').map(Number), t=new Date(p[0],p[1]-1+d,1);
+    const last=new Date(t.getFullYear(),t.getMonth()+1,0).getDate();
+    r.dl=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(Math.min(p[2],last)).padStart(2,'0');
+  });
+}
+function papanWireDraw(c){
+  const h=$('pDrawHost');
+  h.onclick=e=>{ if(e.target.closest('[data-pclose]')) papanCloseDraw(); };
+  $('pMon').onchange=e=>{ papanGeserBulan(c,e.target.value); papanOpenCard(papanOpen);
+    toast('Dipindah ke '+e.target.value+' — tanggal ikut digeser.'); };
+  $('pBud').onblur=e=>{ const v=papanRp(e.target.value); e.target.value=v?fmtNum(v):''; papanRefreshMeter(c); };
+  $('pBudGo').onclick=()=>{ proposeBudget(c.card, c.bulan, papanRp($('pBud').value)); };
+  $('pBagi').onclick=()=>{
+    const est=papanRp($('pBud').value)||papanEst(c.card,c.bulan);
+    if(!est){ toast('Isi Budget dulu.', true); return; }
+    if(!c.rows.length){ toast('Belum ada baris.', true); return; }
+    const per=Math.floor(est/c.rows.length/50000)*50000;
+    c.rows.forEach((r,i)=>{ r.nom = i===c.rows.length-1 ? est-(per*(c.rows.length-1)) : per; });
+    papanRefreshRows(c); toast(fmtRp(est)+' dibagi ke '+c.rows.length+' baris.');
+  };
+  $('pAdd').onclick=()=>{
+    const last=c.rows[c.rows.length-1];
+    c.rows.push({sub:'',sub0:'',dl:(last&&last.dl)||'',dl0:'',nom:0,nom0:0,st:'Task Created',st0:'',baru:true});
+    papanRefreshRows(c);
+    const inp=document.querySelectorAll('#pRows .ps'); if(inp.length) inp[inp.length-1].focus();
+  };
+  $('pPaste').onclick=()=>{
+    const t=prompt('Tempel item checklist dari Trello (satu per baris):');
+    if(t===null) return;
+    const lines=String(t).split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    lines.forEach(raw=>{
+      const m=raw.match(/\[0*(\d{1,2})[^0-9\]]+0*(\d{1,2})(?:[^0-9\]]+(\d{4}))?\]/);
+      let dl='';
+      if(m){ const y=m[3]?+m[3]:new Date().getFullYear();
+        dl=y+'-'+String(+m[2]).padStart(2,'0')+'-'+String(+m[1]).padStart(2,'0'); }
+      const rp=raw.match(/(?:rp|idr)\s*\.?\s*([0-9][0-9.,]*)\s*(jt|juta|rb|ribu|k|miliar|milyar|m)?/i);
+      const nom=rp?papanRp(rp[1]+(rp[2]||'')):0;
+      const sub=raw.replace(/\[[^\]]*\]\s*/,'').replace(/\(\s*(?:rp|idr)[^)]*\)/ig,'').replace(/^[\s\-]+/,'').trim();
+      c.rows.push({sub:sub,sub0:'',dl:dl,dl0:'',nom:nom,nom0:0,st:'Task Created',st0:'',baru:true});
+    });
+    papanRefreshRows(c); toast(lines.length+' baris terbaca — tanggal & nominal ikut terisi.');
+  };
+  h.querySelectorAll('[data-pb]').forEach(b=>b.onclick=()=>{
+    const k=b.dataset.pb;
+    c.rows.forEach(r=>{ if(!r.dl) return;
+      const p=r.dl.split('-').map(Number); let d=new Date(p[0],p[1]-1,p[2]);
+      if(k==='eom') d=new Date(p[0],p[1],0); else d.setDate(d.getDate()+ +k);
+      r.dl=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    });
+    papanRefreshRows(c); toast(k==='eom'?'Semua tanggal ke akhir bulannya.':('Semua tanggal +'+k+' hari.'));
+  });
+  $('pDone').onclick=papanCloseDraw;
+  papanWireRows(c);
+}
+function papanWireBoard(){
+  const board=$('papanBoard'); if(!board) return;
+  board.onclick=e=>{ const t=e.target.closest('[data-pt]'); if(t&&!t.classList.contains('dragging')) papanOpenCard(+t.dataset.pt); };
+  board.ondragstart=e=>{ const t=e.target.closest('[data-pt]'); if(!t) return;
+    papanDrag=+t.dataset.pt; t.classList.add('dragging'); e.dataTransfer.effectAllowed='move';
+    try{ e.dataTransfer.setData('text/plain', String(papanDrag)); }catch(_){} };
+  board.ondragend=e=>{ const t=e.target.closest('[data-pt]'); if(t) t.classList.remove('dragging');
+    board.querySelectorAll('.pcol.over').forEach(c=>c.classList.remove('over')); papanDrag=null; };
+  board.ondragover=e=>{ const col=e.target.closest('[data-pcol]'); if(!col||papanDrag===null) return;
+    e.preventDefault(); board.querySelectorAll('.pcol.over').forEach(c=>{ if(c!==col) c.classList.remove('over'); });
+    col.classList.add('over'); };
+  board.ondrop=e=>{ const col=e.target.closest('[data-pcol]'); if(!col||papanDrag===null) return;
+    e.preventDefault(); const i=papanDrag; papanDrag=null;
+    const c=(papanData||[])[i], ke=col.dataset.pcol;
+    if(!c||c.bulan===ke||ke==='(tanpa bulan)'){ papanRedraw(); return; }
+    const dari=c.bulan||'tanpa bulan';
+    papanGeserBulan(c,ke); papanRedraw();
+    toast('"'+c.card+'" · '+dari+' → '+ke+' · '+c.rows.length+' tanggal ikut digeser.');
+  };
+}
+async function papanSimpan(){
+  const items=[];
+  (papanData||[]).forEach(c=>c.rows.forEach(r=>{
+    if(!papanRowDirty(r)) return;
+    if(!String(r.sub||'').trim()) return;
+    items.push({ card:c.card, subtask:r.sub, deadline:r.dl, nominal:Number(r.nom)||0, status:r.st });
+  }));
+  if(!items.length){ toast('Tidak ada perubahan.'); return; }
+  const b=$('pSave'); b.disabled=true; b.textContent='Menyimpan…';
+  try{
+    const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({
+      type:'editProyeksiBulk', brand:auth.brand, password:auth.password, items:items })});
+    const j=await r.json();
+    if(j.success){ toast('✅ '+(j.count||items.length)+' baris tersimpan — langsung berlaku.');
+      papanData=null; agendaLoaded=false; loadBrandAgenda(); }
+    else { toast('Gagal: '+(j.error||''), true); b.disabled=false; b.textContent='💾 Simpan Semua'; }
+  }catch(e){ toast('Gagal terhubung ke server.', true); b.disabled=false; b.textContent='💾 Simpan Semua'; }
+}
+function wireAgendaPapan(){
+  papanWireBoard(); papanRefreshDock();
+  const s=$('pSave'), r=$('pReset');
+  if(s) s.onclick=papanSimpan;
+  if(r) r.onclick=()=>{ papanData=null; renderBrandAgenda(); toast('Semua perubahan dibatalkan.'); };
+}
+
 // Deteksi baris yang berubah (bandingkan input vs nilai asli di data-*).
 function agRowChanged(tr){
   const dl=tr.querySelector('.ag-dl').value||'';
