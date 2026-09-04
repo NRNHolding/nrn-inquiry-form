@@ -1530,6 +1530,17 @@ const PAPAN_MON=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agust
 const PAPAN_ST=['Task Created','Checklist Created','In Progress','Done'];
 let papanData=null, papanOpen=null, papanDrag=null, papanSort='urut';
 
+// Nama subtask di sheet masih membawa tag "[DD MM] -" (kalau parser tanggalnya
+// gagal) dan "(Rp ...)". Yang ditampilkan cukup brief-nya; tanggal & nominal
+// sudah punya kolom sendiri. Nama aslinya disimpan di r.key sebagai identitas
+// baris saat menyimpan override.
+function papanBrief(s){
+  const t=String(s||'')
+    .replace(/^\s*\[[^\]]*\]\s*[-–—]?\s*/, '')
+    .replace(/\(\s*(?:rp|idr)[^)]*\)/ig, '')
+    .replace(/\s{2,}/g,' ').trim();
+  return t || String(s||'').trim();
+}
 function papanBuild(det){
   const map={};
   (det||[]).forEach(x=>{
@@ -1537,8 +1548,9 @@ function papanBuild(det){
     if(!map[key]) map[key]={card:key, bulan:String(x.bulan||''), bulan0:String(x.bulan||''), pic:String(x.pic||''), rows:[]};
     if(!map[key].bulan && x.bulan){ map[key].bulan=String(x.bulan); map[key].bulan0=String(x.bulan); }
     if(!map[key].pic && x.pic) map[key].pic=String(x.pic);
-    const sub=String(x.subtask||''), dl=String(x.deadlineISO||''), nom=Number(x.nominal)||0, st=agStatusLabel(x.status);
-    map[key].rows.push({sub:sub,sub0:sub,dl:dl,dl0:dl,nom:nom,nom0:nom,st:st,st0:st,baru:false});
+    const raw=String(x.subtask||''), sub=papanBrief(raw);
+    const dl=String(x.deadlineISO||''), nom=Number(x.nominal)||0, st=agStatusLabel(x.status);
+    map[key].rows.push({key:raw,raw:raw,sub:sub,sub0:sub,dl:dl,dl0:dl,nom:nom,nom0:nom,st:st,st0:st,baru:false});
   });
   // Kolom mengikuti bulan tanggal subtask paling awal; kalau tak ada tanggal, baru
   // jatuh ke nama list Trello. Tanpa ini kartu yang digeser bulannya balik ke kolom
@@ -1649,13 +1661,16 @@ function papanRowHtml(r,idx){
   const s=papanSisa(r.dl), warn=!r.dl||!(Number(r.nom)>0);
   return '<div class="prow'+(warn?' warn':'')+'" data-pr="'+idx+'">'
     +'<div class="g1">'
-    +'<input class="ps" value="'+esc(r.sub)+'" placeholder="Nama subtask">'
+    +'<input class="ps" value="'+esc(r.sub)+'" placeholder="Nama subtask"'
+    +(r.baru?'':' readonly title="Nama subtask ikut Trello — yang bisa diubah di sini tanggal, nominal, dan status."')+'>'
     +'<input class="pd" type="date" value="'+esc(r.dl)+'">'
     +'<input class="pn rp" value="'+(Number(r.nom)>0?fmtNum(r.nom):'')+'" placeholder="0">'
     +'<select class="pst">'+PAPAN_ST.map(o=>'<option'+(o===r.st?' selected':'')+'>'+o+'</option>').join('')+'</select>'
     +'<button class="del" data-pdel="'+idx+'" title="Hapus baris">&times;</button>'
     +'</div>'
-    +'<div class="gen">akan ditulis: <code>'+esc(papanNama(r.sub,r.dl,r.nom))+'</code>'
+    +'<div class="gen">'+(r.baru
+       ? ('akan ditulis: <code>'+esc(papanNama(r.sub,r.dl,r.nom))+'</code>')
+       : ('dari Trello: <code>'+esc(r.raw||r.sub)+'</code>'))
     +(s===null?' · tanpa tanggal':(' · '+(s<0?((-s)+' hari lewat'):(s+' hari lagi'))))+'</div>'
     +'</div>';
 }
@@ -1717,7 +1732,8 @@ function papanWireRows(c){
     const r=c.rows[+el.dataset.pr]; if(!r) return;
     const gen=el.querySelector('.gen code');
     const upd=()=>{ gen.textContent=papanNama(r.sub,r.dl,r.nom); papanRefreshDock(); };
-    el.querySelector('.ps').oninput=e=>{ r.sub=e.target.value; upd(); };
+    const nm=el.querySelector('.ps');
+    if(r.baru) nm.oninput=e=>{ r.sub=e.target.value; upd(); };
     el.querySelector('.pd').onchange=e=>{ r.dl=e.target.value; papanRefreshRows(c); };
     el.querySelector('.pst').onchange=e=>{ r.st=e.target.value; papanRefreshDock(); };
     el.querySelector('.pn').onblur=e=>{ const v=papanRp(e.target.value); r.nom=v;
@@ -1755,7 +1771,7 @@ function papanWireDraw(c){
   };
   $('pAdd').onclick=()=>{
     const last=c.rows[c.rows.length-1];
-    c.rows.push({sub:'',sub0:'',dl:(last&&last.dl)||'',dl0:'',nom:0,nom0:0,st:'Task Created',st0:'',baru:true});
+    c.rows.push({key:'',raw:'',sub:'',sub0:'',dl:(last&&last.dl)||'',dl0:'',nom:0,nom0:0,st:'Task Created',st0:'',baru:true});
     papanRefreshRows(c);
     const inp=document.querySelectorAll('#pRows .ps'); if(inp.length) inp[inp.length-1].focus();
   };
@@ -1771,7 +1787,7 @@ function papanWireDraw(c){
       const rp=raw.match(/(?:rp|idr)\s*\.?\s*([0-9][0-9.,]*)\s*(jt|juta|rb|ribu|k|miliar|milyar|m)?/i);
       const nom=rp?papanRp(rp[1]+(rp[2]||'')):0;
       const sub=raw.replace(/\[[^\]]*\]\s*/,'').replace(/\(\s*(?:rp|idr)[^)]*\)/ig,'').replace(/^[\s\-]+/,'').trim();
-      c.rows.push({sub:sub,sub0:'',dl:dl,dl0:'',nom:nom,nom0:0,st:'Task Created',st0:'',baru:true});
+      c.rows.push({key:'',raw:raw,sub:sub,sub0:'',dl:dl,dl0:'',nom:nom,nom0:0,st:'Task Created',st0:'',baru:true});
     });
     papanRefreshRows(c); toast(lines.length+' baris terbaca — tanggal & nominal ikut terisi.');
   };
@@ -1812,7 +1828,7 @@ async function papanSimpan(){
   (papanData||[]).forEach(c=>c.rows.forEach(r=>{
     if(!papanRowDirty(r)) return;
     if(!String(r.sub||'').trim()) return;
-    items.push({ card:c.card, subtask:r.sub, deadline:r.dl, nominal:Number(r.nom)||0, status:r.st });
+    items.push({ card:c.card, subtask:(r.key||r.sub), deadline:r.dl, nominal:Number(r.nom)||0, status:r.st });
   }));
   if(!items.length){ toast('Tidak ada perubahan.'); return; }
   const b=$('pSave'); b.disabled=true; b.textContent='Menyimpan…';
