@@ -149,6 +149,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
 .prow input.rp{text-align:right}
 .prow .del{background:none;border:0;color:var(--text3);cursor:pointer;font-size:15px;padding:0}
 .prow .del:hover{color:var(--red)}
+.kabar{margin:0 0 12px;border-radius:10px;border:1px solid var(--cream2);overflow:hidden}
+.kabar .baris{display:flex;gap:10px;align-items:flex-start;padding:10px 13px;border-bottom:1px solid var(--cream2);font-size:12.5px;line-height:1.5}
+.kabar .baris:last-child{border-bottom:0}
+.kabar .baris.ok{background:#f2f8f3;border-left:4px solid var(--green4)}
+.kabar .baris.no{background:#fdf3f2;border-left:4px solid var(--red)}
+.kabar .baris .t{flex:1;min-width:0;color:var(--text)}
+.kabar .baris .t small{display:block;margin-top:2px;color:var(--text2);font-size:11.5px}
+.kabar .tutup{background:none;border:0;color:var(--text3);cursor:pointer;font-size:16px;line-height:1;padding:0 2px}
+.kabar .tutup:hover{color:var(--text)}
 .ptunggu{margin-top:7px;padding:7px 9px;border:1px solid var(--gold);border-radius:8px;background:#fffaf0;font-size:11.5px;color:var(--text2);line-height:1.5}
 .ptunggu b{color:var(--text)}
 .pdet{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:7px 12px}
@@ -1483,9 +1492,53 @@ async function loadBrandAgenda(){
     brandAgenda=d; agendaLoaded=true; renderBrandAgenda();
   }catch(e){ box.innerHTML='<div class="err show">Gagal terhubung ke server.</div>'; }
 }
+// ── Kabar keputusan BOD ────────────────────────────────────────
+// Usulan budget yang sudah diputus (approve/tolak) ditampilkan sekali sebagai
+// kabar di atas agenda. Yang sudah dibaca disimpan di localStorage browser ini
+// saja — cuma untuk menandai "sudah dilihat", bukan data yang perlu dibagi.
+const KABAR_KEY='nrnKabarBudget';
+function kabarSudah(){
+  try{ return JSON.parse(localStorage.getItem(KABAR_KEY)||'{}')||{}; }catch(e){ return {}; }
+}
+function kabarTandai(id){
+  try{ const m=kabarSudah(); m[id]=1; localStorage.setItem(KABAR_KEY, JSON.stringify(m)); }catch(e){}
+}
+function kabarId(o){
+  return [o.brand,o.card,o.year,o.status,o.decidedAt||''].join('|');
+}
+function kabarBaru(){
+  const sudah=kabarSudah();
+  return ((brandAgenda&&brandAgenda.budgetOverrides)||[])
+    .filter(o=>{ const st=String(o.status||'').toLowerCase();
+                 return (st==='approved'||st==='rejected') && !sudah[kabarId(o)]; });
+}
+function kabarHtml(){
+  const list=kabarBaru();
+  if(!list.length) return '';
+  return '<div class="kabar" id="kabarBox">'+list.map(o=>{
+    const ok=String(o.status).toLowerCase()==='approved';
+    const kapan=o.decidedAt?(' \u00b7 '+esc(o.decidedAt)):'';
+    const alasan=(!ok && o.note)?('<small>Alasan: '+esc(o.note)+'</small>'):'';
+    return '<div class="baris '+(ok?'ok':'no')+'" data-kabar="'+esc(kabarId(o))+'">'
+      +'<div class="t">'+(ok?'\u2705':'\u2717')+' <b>'+esc(o.card||'')+'</b> \u2014 usulan budget '
+      +fmtRp(Number(o.budget)||0)+(ok?' <b>disetujui BOD</b>':' <b>ditolak BOD</b>')+kapan+'.'
+      +(ok?'<small>Angka ini sekarang dipakai sebagai budget yang disepakati.</small>':'')
+      +alasan+'</div>'
+      +'<button class="tutup" data-kabartutup="'+esc(kabarId(o))+'" title="Tandai sudah dibaca">&times;</button></div>';
+  }).join('')+'</div>';
+}
+function kabarWire(box){
+  (box||document).querySelectorAll('[data-kabartutup]').forEach(b=>{
+    b.onclick=()=>{
+      kabarTandai(b.dataset.kabartutup);
+      const baris=b.closest('[data-kabar]'); if(baris) baris.remove();
+      const kotak=$('kabarBox'); if(kotak && !kotak.children.length) kotak.remove();
+    };
+  });
+}
 function renderBrandAgenda(){
   const box=$('pane-agenda'), s=brandAgenda.summary, det=brandAgenda.detail||[];
-  const head=`
+  const head=kabarHtml()+`
     <div class="section-title">📌 Agenda — ${esc(brandAgenda.brand)}</div>
     <div class="kpis">
       <div class="kpi"><h3>Total Agenda</h3><div class="v num">${s.total}</div></div>
@@ -1521,6 +1574,7 @@ function renderBrandAgenda(){
         <thead><tr><th>Card / Agenda</th><th class="sub">Subtask</th><th>Deadline</th><th>Nominal (Rp)</th><th>Sisa</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   } else { body=renderAgendaCalendar(det); }
   box.innerHTML=head+body;
+  kabarWire(box);
   if(agendaViewMode==='list') wireAgendaBulk(box);
   if(agendaViewMode==='papan') wireAgendaPapan();
   $('agViewList').onclick=()=>{agendaViewMode='list';renderBrandAgenda();};
