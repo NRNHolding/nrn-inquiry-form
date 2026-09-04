@@ -1540,7 +1540,14 @@ function papanBuild(det){
     const sub=String(x.subtask||''), dl=String(x.deadlineISO||''), nom=Number(x.nominal)||0, st=agStatusLabel(x.status);
     map[key].rows.push({sub:sub,sub0:sub,dl:dl,dl0:dl,nom:nom,nom0:nom,st:st,st0:st,baru:false});
   });
-  return Object.keys(map).map(k=>map[k]);
+  // Kolom mengikuti bulan tanggal subtask paling awal; kalau tak ada tanggal, baru
+  // jatuh ke nama list Trello. Tanpa ini kartu yang digeser bulannya balik ke kolom
+  // lama begitu halaman dimuat ulang.
+  return Object.keys(map).map(k=>{
+    const c=map[k], dls=c.rows.map(r=>r.dl).filter(Boolean).sort();
+    if(dls.length){ c.bulan=PAPAN_MON[+dls[0].slice(5,7)-1]||c.bulan; c.bulan0=c.bulan; }
+    return c;
+  });
 }
 const papanRowDirty=r=>!!(r.baru||r.sub!==r.sub0||r.dl!==r.dl0||Number(r.nom)!==Number(r.nom0)||r.st!==r.st0);
 const papanCardDirty=c=>!!(c.bulan!==c.bulan0||c.rows.some(papanRowDirty));
