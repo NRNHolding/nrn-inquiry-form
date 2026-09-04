@@ -1710,10 +1710,21 @@ const papanAgDirty=c=>!!(c.ag!==c.ag0||Number(c.foto)!==Number(c.foto0)||Number(
 const papanAktDirty=c=>Number(c.akt||0)!==Number(c.akt0||0);
 const papanCardDirty=c=>!!(c.bulan!==c.bulan0||papanAgDirty(c)||papanAktDirty(c)||c.rows.some(papanRowDirty));
 const papanDirtyN=()=>(papanData||[]).reduce((n,c)=>n+(papanCardDirty(c)?1:0),0);
+// Bulan di estDetail ikut deadline KARTU-nya, sedangkan kolom papan ikut tanggal
+// subtask paling awal — dua hal yang sering tidak sama. Kalau dicocokkan mentah
+// dengan bulan, budget yang sudah di-approve bisa terbaca kosong. Jadi: cocok
+// persis dulu, kalau tidak ada jatuh ke nama kartu saja.
 function papanEst(card,bulan){
+  const nama=String(card||'').trim();
   const src=(brandFin&&brandFin.estDetail)||(brandAgenda&&brandAgenda.estDetail)||[];
-  const d=src.find(e=>String(e.card)===String(card)&&(!bulan||String(e.month)===String(bulan)));
-  return d?Number(d.est)||0:0;
+  const sama=e=>String(e.card||'').trim()===nama;
+  const d=src.find(e=>sama(e)&&(!bulan||String(e.month)===String(bulan))) || src.find(sama);
+  if(d && Number(d.est)>0) return Number(d.est);
+  // Kartu yang belum ada di Task Database tidak pernah muncul di estDetail.
+  // Kalau usulannya sudah di-approve BOD, angka itu yang berlaku.
+  const ov=((brandAgenda&&brandAgenda.budgetOverrides)||(brandFin&&brandFin.budgetOverrides)||[])
+    .find(o=>String(o.card||'').trim()===nama && String(o.status||'').toLowerCase()==='approved');
+  return ov?(Number(ov.budget)||0):0;
 }
 function papanSisa(iso){
   if(!iso) return null;
