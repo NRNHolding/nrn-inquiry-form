@@ -2317,16 +2317,19 @@ function renderBrandFinance(){
 }
 // Brand ajukan/revisi Budget → status 'pending', menunggu approval BOD.
 async function proposeBudget(card, month, budget){
+  // brandFin baru terisi kalau tab Keuangan pernah dibuka. Dari Papan biasanya
+  // masih null, jadi tahunnya jangan diambil dari sana.
+  const tahun=(brandFin&&brandFin.year)||new Date().getFullYear();
   if(!(budget>0)){ toast('Isi nominal budget dulu.', true); return; }
   if(!confirm('Ajukan budget '+fmtRp(budget)+' untuk "'+card+'"?\nBerlaku setelah di-approve BOD.')) return;
   try{
     const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({
       type:'proposeBudget', brand:auth.brand, password:auth.password,
-      card:card, month:month, year:brandFin.year, budget:budget })});
+      card:card, month:month, year:tahun, budget:budget })});
     const j=await r.json();
-    if(j.success){ toast('✅ Usulan budget dikirim — menunggu approval BOD.'); reloadBrandFinance(); }
+    if(j.success){ toast('✅ Usulan budget dikirim — menunggu approval BOD.'); if(brandFin) reloadBrandFinance(); }
     else toast('Gagal: '+(j.error||''), true);
-  }catch(e){ toast('Gagal terhubung ke server.', true); }
+  }catch(e){ toast('Gagal mengirim: '+((e&&e.message)||'tidak terhubung ke server'), true); }
 }
 async function reloadBrandFinance(){
   try{
