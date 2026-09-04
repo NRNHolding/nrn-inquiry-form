@@ -1528,7 +1528,7 @@ function renderBrandAgenda(){
 /* ═══ Papan — kanban per bulan, mengikuti list board brand ═══ */
 const PAPAN_MON=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 const PAPAN_ST=['Task Created','Checklist Created','In Progress','Done'];
-let papanData=null, papanOpen=null, papanDrag=null;
+let papanData=null, papanOpen=null, papanDrag=null, papanSort='urut';
 
 function papanBuild(det){
   const map={};
@@ -1575,6 +1575,21 @@ function papanRp(s){
   return Number(t.replace(/[^0-9]/g,''))||0;
 }
 
+const PAPAN_SORT_LBL={urut:'Bawaan',tertinggal:'Paling tertinggal',selesai:'Paling selesai'};
+// Urutkan kartu di dalam tiap kolom berdasarkan penyelesaian (done / total subtask).
+// Seri diputus oleh jumlah subtask yang lewat deadline, lalu nama card.
+function papanUrut(list){
+  if(papanSort==='urut') return list;
+  const rasio=p=>{ const c=p[0], tot=c.rows.length||1;
+    return c.rows.filter(r=>r.st==='Done').length/tot; };
+  const telat=p=>p[0].rows.filter(r=>{const d=papanSisa(r.dl);return r.st!=='Done'&&d!==null&&d<0;}).length;
+  return list.slice().sort((a,b)=>{
+    const d=(rasio(a)-rasio(b))*(papanSort==='tertinggal'?1:-1);
+    if(d) return d;
+    const t=telat(b)-telat(a); if(t) return t;
+    return String(a[0].card).localeCompare(String(b[0].card));
+  });
+}
 function papanTile(c,i){
   const tot=c.rows.length, done=c.rows.filter(r=>r.st==='Done').length;
   const nonom=c.rows.filter(r=>!(Number(r.nom)>0)).length;
@@ -1602,7 +1617,7 @@ function papanBoardHtml(){
     return '<section class="pcol'+(quiet?' quiet':'')+(M===kini?' now':'')+'" data-pcol="'+esc(M)+'">'
       +'<div class="phd"><b>'+esc(M)+'</b><span class="n">'+list.length+'</span>'
       +(quiet?'':'<span class="s">'+fmtRp(pro)+'</span>')+'</div>'
-      +'<div class="pstack">'+(list.map(p=>papanTile(p[0],p[1])).join('')
+      +'<div class="pstack">'+(papanUrut(list).map(p=>papanTile(p[0],p[1])).join('')
         ||'<div class="pempty">seret ke sini</div>')+'</div></section>';
   }).join('');
 }
@@ -1613,7 +1628,10 @@ function renderAgendaPapan(det){
     +'Langsung berlaku (mengalahkan Trello).</div>'
     +'<div class="agbar"><button class="btn btn-gold" id="pSave" disabled>💾 Simpan Semua</button>'
     +'<span class="dirtycount" id="pDirty"></span>'
-    +'<button class="tab" id="pReset" style="display:none">↺ Batalkan perubahan</button></div>'
+    +'<button class="tab" id="pReset" style="display:none">↺ Batalkan perubahan</button>'
+    +'<span style="flex:1"></span><span class="muted" style="font-size:11px">Urutkan</span>'
+    +['urut','tertinggal','selesai'].map(k=>'<button class="tab'+(papanSort===k?' active':'')
+      +'" data-psort="'+k+'">'+PAPAN_SORT_LBL[k]+'</button>').join('')+'</div>'
     +'<div class="papan" id="papanBoard">'+papanBoardHtml()+'</div><div id="pDrawHost"></div>';
 }
 function papanRefreshDock(){
@@ -1809,6 +1827,7 @@ async function papanSimpan(){
 }
 function wireAgendaPapan(){
   papanWireBoard(); papanRefreshDock();
+  document.querySelectorAll('[data-psort]').forEach(b=>b.onclick=()=>{ papanSort=b.dataset.psort; renderBrandAgenda(); });
   const s=$('pSave'), r=$('pReset');
   if(s) s.onclick=papanSimpan;
   if(r) r.onclick=()=>{ papanData=null; renderBrandAgenda(); toast('Semua perubahan dibatalkan.'); };
