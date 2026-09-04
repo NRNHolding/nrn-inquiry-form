@@ -149,6 +149,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
 .prow input.rp{text-align:right}
 .prow .del{background:none;border:0;color:var(--text3);cursor:pointer;font-size:15px;padding:0}
 .prow .del:hover{color:var(--red)}
+.ptunggu{margin-top:7px;padding:7px 9px;border:1px solid var(--gold);border-radius:8px;background:#fffaf0;font-size:11.5px;color:var(--text2);line-height:1.5}
+.ptunggu b{color:var(--text)}
 .pdet{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:7px 12px}
 .pdet .it{min-width:0}
 .pdet .k{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--text3)}
@@ -599,6 +601,7 @@ $('logoutBtn').onclick = ()=>{
   // reset panes brand needs
   agendaLoaded = mktLoaded = finLoaded = false; finPw = '';
   papanData = null; papanSig = null; papanOpen = null;   // jangan bawa papan brand lama
+  papanUsulBaru = {};
   brandAgenda = brandFin = brandMkt = null; calYear = undefined;
   switchPane('inquiry');
 };
@@ -1544,6 +1547,28 @@ let papanData=null, papanOpen=null, papanDrag=null, papanSort='urut', papanSig=n
 // Agency per kartu. Hanya 3 pilihan; kosong = pekerjaan itu tanpa agency.
 // Design dikerjakan Akronim; foto & video oleh Tenshi Studio atau Holding.
 const PAPAN_AG=['Tenshi Studio','Akronim','Holding'];
+// Usulan budget menunggu keputusan BOD. Sumbernya respons agenda; kalau
+// baru saja diajukan dari laci ini, ditandai lokal dulu (papanUsulBaru)
+// supaya penandanya langsung muncul tanpa perlu muat ulang.
+let papanUsulBaru={};
+function papanUsulOf(card){
+  const lokal=papanUsulBaru[String(card)];
+  if(lokal) return lokal;
+  const rows=(brandAgenda&&brandAgenda.budgetOverrides)||[];
+  return rows.find(x=>String(x.card)===String(card)&&String(x.status||'').toLowerCase()==='pending')||null;
+}
+// Penanda usulan yang belum diputus BOD. Ditaruh persis di bawah meter budget
+// supaya jelas kenapa angka budget belum berubah setelah tombol ditekan.
+function papanTungguHtml(c){
+  const u=papanUsulOf(c.card);
+  if(!u) return '';
+  const kapan=u.proposedAt?(' \u00b7 diajukan '+esc(u.proposedAt)):'';
+  return '<div class="ptunggu">\u23F3 <b>Menunggu approval BOD</b> \u2014 usulan <b>'+fmtRp(Number(u.budget)||0)+'</b>'+kapan+'.'
+    +'<br>Budget yang dipakai masih yang lama sampai BOD menyetujui. Tidak perlu diajukan ulang.</div>';
+}
+function papanTungguRefresh(c){
+  const el=$('pTunggu'); if(el) el.innerHTML=papanTungguHtml(c);
+}
 function papanCardOf(card){
   const rows=(brandAgenda&&brandAgenda.cardDetail)||[];
   return rows.find(x=>String(x.card)===String(card))||null;
@@ -1595,7 +1620,8 @@ function papanBrief(s){
 function papanSigOf(det){
   const ag=((brandAgenda&&brandAgenda.agencyKartu)||[])
     .map(x=>[x.card,x.agency,x.foto,x.video,x.design].join('|')).join(';')
-   +'#'+((brandAgenda&&brandAgenda.aktDetail)||[]).map(x=>[x.card,x.act].join('|')).join(';');
+   +'#'+((brandAgenda&&brandAgenda.aktDetail)||[]).map(x=>[x.card,x.act].join('|')).join(';')
+   +'#'+((brandAgenda&&brandAgenda.budgetOverrides)||[]).map(x=>[x.card,x.status,x.budget].join('|')).join(';');
   return (det||[]).map(x=>[x.card,x.subtask,x.bulan,x.deadlineISO,x.nominal,x.status,x.catatan].join('')).join('')+'##'+ag;
 }
 function papanBuild(det){
@@ -1681,6 +1707,7 @@ function papanTile(c,i){
     +'<span class="pb '+(tot&&done===tot?'g':'')+'">'+done+'/'+tot+' selesai</span>'
     +'<span class="pb '+(est?(pro>est?'b':''):'w')+'">'+(est?(fmtRp(pro)+' / '+fmtRp(est)):'budget kosong')+'</span>'
     +(Number(c.akt)>0?('<span class="pb '+(est&&c.akt>est?'b':'g')+'">aktual '+fmtRp(c.akt)+'</span>'):'')
+    +(papanUsulOf(c.card)?'<span class="pb w">usulan menunggu BOD</span>':'')
     +(nonom?'<span class="pb w">'+nonom+' tanpa nominal</span>':'')
     +(telat?'<span class="pb b">'+telat+' lewat</span>':'')
     +(c.ag?'<span class="pb">'+esc(c.ag)+' '+((Number(c.foto)||0)+(Number(c.video)||0)+(Number(c.design)||0))+'</span>':'')
@@ -1768,7 +1795,8 @@ function papanDrawHtml(c){
     +'<span class="muted" style="font-size:11.5px">Aktual terpakai</span>'
     +'<input id="pAkt" value="'+(Number(c.akt)>0?fmtNum(c.akt):'')+'" placeholder="0" '
     +'style="width:150px;text-align:right;padding:6px 9px;border:1px solid var(--cream2);border-radius:8px;background:var(--white);color:var(--text);font-size:12.5px"></div>'
-    +'<div class="muted" id="pMeter" style="font-size:11px;margin-top:6px">'+papanMeterHtml(c,est,pro)+'</div></div>'
+    +'<div class="muted" id="pMeter" style="font-size:11px;margin-top:6px">'+papanMeterHtml(c,est,pro)+'</div>'
+    +'<div id="pTunggu">'+papanTungguHtml(c)+'</div></div>'
     +papanAgHtml(c)
     +'<div class="psec"><div class="l">Checklist · '+c.rows.length+' baris<span class="sp"></span>'
     +'<button class="pchip" id="pPaste">Tempel dari Trello</button>'
@@ -1895,7 +1923,12 @@ function papanWireDraw(c){
   [['pFoto','foto'],['pVideo','video'],['pDesign','design']].forEach(function(x){
     $(x[0]).oninput=e=>{ c[x[1]]=Math.max(0,Number(e.target.value)||0); papanRefreshDock(); };
   });
-  $('pBudGo').onclick=()=>{ proposeBudget(c.card, c.bulan, papanRp($('pBud').value)); };
+  $('pBudGo').onclick=async ()=>{
+    const nilai=papanRp($('pBud').value);
+    if(!await proposeBudget(c.card, c.bulan, nilai)) return;
+    papanUsulBaru[String(c.card)]={card:c.card, budget:nilai, status:'pending', proposedAt:''};
+    papanTungguRefresh(c); papanRedraw();
+  };
   $('pBagi').onclick=()=>{
     const est=papanRp($('pBud').value)||papanEst(c.card,c.bulan);
     if(!est){ toast('Isi Budget dulu.', true); return; }
@@ -2320,16 +2353,17 @@ async function proposeBudget(card, month, budget){
   // brandFin baru terisi kalau tab Keuangan pernah dibuka. Dari Papan biasanya
   // masih null, jadi tahunnya jangan diambil dari sana.
   const tahun=(brandFin&&brandFin.year)||new Date().getFullYear();
-  if(!(budget>0)){ toast('Isi nominal budget dulu.', true); return; }
-  if(!confirm('Ajukan budget '+fmtRp(budget)+' untuk "'+card+'"?\nBerlaku setelah di-approve BOD.')) return;
+  if(!(budget>0)){ toast('Isi nominal budget dulu.', true); return false; }
+  if(!confirm('Ajukan budget '+fmtRp(budget)+' untuk "'+card+'"?\nBerlaku setelah di-approve BOD.')) return false;
   try{
     const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({
       type:'proposeBudget', brand:auth.brand, password:auth.password,
       card:card, month:month, year:tahun, budget:budget })});
     const j=await r.json();
-    if(j.success){ toast('✅ Usulan budget dikirim — menunggu approval BOD.'); if(brandFin) reloadBrandFinance(); }
-    else toast('Gagal: '+(j.error||''), true);
+    if(j.success){ toast('✅ Usulan budget dikirim — menunggu approval BOD.'); if(brandFin) reloadBrandFinance(); return true; }
+    toast('Gagal: '+(j.error||''), true);
   }catch(e){ toast('Gagal mengirim: '+((e&&e.message)||'tidak terhubung ke server'), true); }
+  return false;
 }
 async function reloadBrandFinance(){
   try{
