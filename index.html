@@ -588,6 +588,7 @@ $('logoutBtn').onclick = ()=>{
   $('loginPw').value = '';
   // reset panes brand needs
   agendaLoaded = mktLoaded = finLoaded = false; finPw = '';
+  papanData = null; papanSig = null; papanOpen = null;   // jangan bawa papan brand lama
   brandAgenda = brandFin = brandMkt = null; calYear = undefined;
   switchPane('inquiry');
 };
@@ -1528,7 +1529,7 @@ function renderBrandAgenda(){
 /* ═══ Papan — kanban per bulan, mengikuti list board brand ═══ */
 const PAPAN_MON=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 const PAPAN_ST=['Task Created','Checklist Created','In Progress','Done'];
-let papanData=null, papanOpen=null, papanDrag=null, papanSort='urut';
+let papanData=null, papanOpen=null, papanDrag=null, papanSort='urut', papanSig=null;
 
 // Nama subtask di sheet masih membawa tag "[DD MM] -" (kalau parser tanggalnya
 // gagal) dan "(Rp ...)". Yang ditampilkan cukup brief-nya; tanggal & nominal
@@ -1540,6 +1541,9 @@ function papanBrief(s){
     .replace(/\(\s*(?:rp|idr)[^)]*\)/ig, '')
     .replace(/\s{2,}/g,' ').trim();
   return t || String(s||'').trim();
+}
+function papanSigOf(det){
+  return (det||[]).map(x=>[x.card,x.subtask,x.bulan,x.deadlineISO,x.nominal,x.status].join('')).join('');
 }
 function papanBuild(det){
   const map={};
@@ -1634,7 +1638,10 @@ function papanBoardHtml(){
   }).join('');
 }
 function renderAgendaPapan(det){
-  if(!papanData) papanData=papanBuild(det);
+  // Bangun ulang setiap kali isi agenda berubah. Tanpa ini, papan tetap
+  // menampilkan kartu brand sebelumnya kalau ganti login tanpa muat ulang.
+  const sig=papanSigOf(det);
+  if(papanData===null || papanSig!==sig){ papanData=papanBuild(det); papanSig=sig; }
   return '<div class="note" style="margin:6px 0">🗂 Kolom mengikuti list bulan di board Trello brand. '
     +'<b>Seret kartu</b> antar bulan untuk menjadwalkan ulang, <b>klik kartu</b> untuk mengisi tanggal, nominal, dan status tiap subtask. '
     +'Langsung berlaku (mengalahkan Trello).</div>'
@@ -1837,7 +1844,7 @@ async function papanSimpan(){
       type:'editProyeksiBulk', brand:auth.brand, password:auth.password, items:items })});
     const j=await r.json();
     if(j.success){ toast('✅ '+(j.count||items.length)+' baris tersimpan — langsung berlaku.');
-      papanData=null; agendaLoaded=false; loadBrandAgenda(); }
+      papanData=null; papanSig=null; agendaLoaded=false; loadBrandAgenda(); }
     else { toast('Gagal: '+(j.error||''), true); b.disabled=false; b.textContent='💾 Simpan Semua'; }
   }catch(e){ toast('Gagal terhubung ke server.', true); b.disabled=false; b.textContent='💾 Simpan Semua'; }
 }
@@ -1846,7 +1853,7 @@ function wireAgendaPapan(){
   document.querySelectorAll('[data-psort]').forEach(b=>b.onclick=()=>{ papanSort=b.dataset.psort; renderBrandAgenda(); });
   const s=$('pSave'), r=$('pReset');
   if(s) s.onclick=papanSimpan;
-  if(r) r.onclick=()=>{ papanData=null; renderBrandAgenda(); toast('Semua perubahan dibatalkan.'); };
+  if(r) r.onclick=()=>{ papanData=null; papanSig=null; renderBrandAgenda(); toast('Semua perubahan dibatalkan.'); };
 }
 
 // Deteksi baris yang berubah (bandingkan input vs nilai asli di data-*).
