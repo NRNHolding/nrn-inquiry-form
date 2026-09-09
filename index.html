@@ -122,8 +122,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
 .ptile{background:var(--white);border:1px solid var(--cream2);border-radius:9px;cursor:grab;text-align:left;padding:9px 10px;width:100%;font:inherit;color:inherit;display:block;box-shadow:0 1px 3px rgba(35,40,30,.06)}
 .ptile:hover{border-color:var(--gold)}
 .ptile.dragging{opacity:.4}
-.ptile .t{font-weight:700;font-size:12.5px;margin-bottom:4px;word-break:break-word}
-.ptile .p{font-size:10px;color:var(--text3);margin-bottom:5px}
+.ptile .t{display:block;font-weight:700;font-size:12.5px;margin-bottom:4px;word-break:break-word}
+.ptile .p{display:block;font-size:10px;color:var(--text3);margin-bottom:5px}
 .ptile .bs{display:flex;flex-wrap:wrap;gap:3px}
 .pb{font-size:9.5px;font-weight:700;padding:2px 5px;border-radius:4px;background:var(--cream);color:var(--text2);white-space:nowrap}
 .pb.w{background:var(--gold-bg);color:var(--amber)}
@@ -182,6 +182,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
   .prow .g1 .pst{grid-column:1 / 3}
 }
 @media(max-width:640px){.papan .pcol{flex-basis:230px}}
+/* ── Layar sentuh (HP & tablet) ─────────────────────────────
+   Ukuran kontrol dinaikkan supaya nyaman dijari, dan font input
+   dipatok 16px: di iOS, input di bawah 16px membuat halaman
+   auto-zoom begitu difokus dan tidak pernah kembali sendiri. */
+
+}
+
 .agbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0}
 .agbar .btn-gold{padding:7px 16px}
 .agbar .dirtycount{font-size:12px;color:var(--amber);font-weight:600}
@@ -280,6 +287,41 @@ tr.lap-soon td{background:#fffaeb}
 .modal h2{font-family:'DM Serif Display',serif;font-size:20px;color:var(--green);font-weight:400;margin-bottom:3px}
 .modal .muted{color:var(--text3);font-size:12.5px;margin-bottom:14px}
 table thead th{cursor:pointer;user-select:none}.sort-ind{opacity:.55;font-size:.85em}
+/* Blok sentuh sengaja diletakkan paling akhir: beberapa aturan dasar
+   (.tab, .btn, .toolbar select, input.pc) muncul belakangan dan akan
+   menimpanya kalau blok ini ditaruh di atas. */
+@media (pointer: coarse){
+  .prow .g1{ grid-template-columns:152px 110px 1fr 30px; }
+  .prow input.pc{ font-size:16px; }
+  .agbar .tab{ padding:11px 16px; }
+  .prow input, .prow select{ font-size:16px; padding:9px 10px; }
+  .prow .del{ font-size:22px; min-height:40px; min-width:32px; }
+  .prow .cat .ic{ font-size:14px; }
+  .pchip{ font-size:12px; padding:10px 14px; min-height:38px; }
+  .tab{ padding:11px 16px; }
+  .btn{ height:46px; }
+  .agbar .btn-gold{ padding:0 18px; height:46px; }
+  .iconbtn{ font-size:13px; padding:9px 13px; }
+  .pdraw .x{ font-size:26px; padding:6px 10px; }
+  .pdraw .b{ padding:14px 14px 28px; }
+  .psec select, .psec input{ font-size:16px !important; padding:9px 10px !important; }
+  #pBud, #pAkt{ height:auto; }
+  /* Tabel List: beri lebar minimum lalu geser mendatar, daripada
+     kolomnya diperas sampai isinya tidak terbaca. */
+  .agedit{ overflow-x:auto; }
+  .agedit table{ min-width:660px; }
+  .agedit .ag-dl, .agedit .ag-nom, .agedit .ag-st{ font-size:16px; padding:8px 8px; max-width:none; }
+  .agedit th, .agedit td{ padding:9px 8px; }
+  /* Kartu papan: target ketuk lebih lega, dan kolom lebih lebar. */
+  .ptile{ padding:12px 12px; cursor:pointer; }
+  .papan .pcol{ max-height:70vh; }
+}
+@media (pointer: coarse) and (max-width:640px){
+  .papan .pcol{ flex-basis:270px; }
+  .papan .pcol.quiet{ flex:0 0 84px; }
+@media (pointer: coarse) and (max-width:560px){
+  .prow .g1{ grid-template-columns:1fr 1fr 30px; }
+}
 </style>
 </head>
 <body>
@@ -1600,6 +1642,7 @@ function renderBrandAgenda(){
   }
 }
 /* ═══ Papan — kanban per bulan, mengikuti list board brand ═══ */
+const SENTUH = (window.matchMedia && matchMedia('(pointer: coarse)').matches) || false;
 const PAPAN_MON=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 const PAPAN_ST=['Task Created','Checklist Created','In Progress','Done'];
 let papanData=null, papanOpen=null, papanDrag=null, papanSort='urut', papanSig=null;
@@ -1771,7 +1814,7 @@ function papanTile(c,i){
   const nonom=c.rows.filter(r=>!(Number(r.nom)>0)).length;
   const telat=c.rows.filter(r=>{const s=papanSisa(r.dl);return r.st!=='Done'&&s!==null&&s<0;}).length;
   const est=papanEst(c.card,c.bulan), pro=c.rows.reduce((s,r)=>s+(Number(r.nom)||0),0);
-  return '<button class="ptile" draggable="true" data-pt="'+i+'">'
+  return '<button class="ptile"'+(SENTUH?'':' draggable="true"')+' data-pt="'+i+'">'
     +'<span class="t">'+esc(c.card)+'</span>'
     +(c.pic?'<span class="p">'+esc(c.pic)+'</span>':'')
     +'<span class="bs">'
@@ -1806,7 +1849,9 @@ function renderAgendaPapan(det){
   const sig=papanSigOf(det);
   if(papanData===null || papanSig!==sig){ papanData=papanBuild(det); papanSig=sig; }
   return '<div class="note" style="margin:6px 0">🗂 Kolom mengikuti list bulan di board Trello brand. '
-    +'<b>Seret kartu</b> antar bulan untuk menjadwalkan ulang, <b>klik kartu</b> untuk mengisi tanggal, nominal, dan status tiap subtask. '
+    +(SENTUH
+      ? '<b>Ketuk kartu</b> untuk mengisi tanggal, nominal, status, dan catatan tiap subtask. Untuk memindah bulan, ketuk kartunya lalu ubah <b>Bulan</b> di bagian atas. '
+      : '<b>Seret kartu</b> antar bulan untuk menjadwalkan ulang, <b>klik kartu</b> untuk mengisi tanggal, nominal, dan status tiap subtask. ')
     +'Langsung berlaku (mengalahkan Trello).</div>'
     +'<div class="agbar"><button class="btn btn-gold" id="pSave" disabled>💾 Simpan Semua</button>'
     +'<span class="dirtycount" id="pDirty"></span>'
