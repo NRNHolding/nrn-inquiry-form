@@ -266,7 +266,7 @@ tr.lap-soon td{background:#fffaeb}
 .tag.corporate{background:var(--blue-bg);color:var(--blue)}
 .tag.others{background:var(--cream2);color:var(--text2)}
 .age{font-size:9.5px;font-weight:700;color:var(--red);margin-left:5px;white-space:nowrap}
-.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(120px);background:var(--green);color:#fff;padding:12px 22px;border-radius:11px;font-size:13.5px;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,.25);transition:transform .35s;z-index:80}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(120px);background:var(--green);color:#fff;padding:12px 22px;border-radius:11px;font-size:13.5px;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,.25);transition:transform .35s;z-index:120}
 .toast.show{transform:translateX(-50%) translateY(0)}
 .toast.err{background:var(--red)}
 .note{font-size:11px;color:var(--text3);margin-top:8px}
@@ -1411,10 +1411,19 @@ $('ovEdit').onclick = e => { if(e.target.id==='ovEdit') $('ovEdit').classList.re
 $('eStatus').addEventListener('change', ()=>toggleCancel('e'));
 $('saveEditBtn').onclick = async ()=>{
   const customer = $('eCustomer').value.trim();
-  if(!customer){ toast('Nama customer wajib diisi.', true); return; }
+  if(!customer){
+    toast('Nama customer wajib diisi.', true);
+    const f=$('eCustomer'); f.scrollIntoView({block:'center',behavior:'smooth'}); f.focus();
+    return;
+  }
   const eStatus = $('eStatus').value;
   const eReason = $('eCancelReason').value.trim();
-  if(eStatus.indexOf('Cancel')>=0 && !eReason){ toast('Alasan Cancel wajib diisi.', true); return; }
+  if(eStatus.indexOf('Cancel')>=0 && !eReason){
+    toast('Alasan Cancel wajib diisi.', true);
+    const f=$('eCancelReason');
+    f.scrollIntoView({block:'center',behavior:'smooth'}); f.focus();
+    return;
+  }
   const payload = {
     type: 'inquiryUpdate',
     brand: auth.brand,
