@@ -173,6 +173,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
 .prow.adacat{border-color:var(--gold);background:#fffaf0}
 .prow .gen{margin-top:5px;font-size:10px;color:var(--text3);word-break:break-word}
 .prow .gen code{background:var(--white);padding:1px 4px;border-radius:4px}
+.thnpill{display:inline-flex;border:1.5px solid var(--cream2);border-radius:10px;overflow:hidden;background:var(--white)}
+.thnpill .thn{font:inherit;font-weight:700;font-size:12.5px;border:0;background:transparent;color:var(--text2);padding:7px 13px;cursor:pointer}
+.thnpill .thn.on{background:var(--green);color:var(--cream)}
+.thnpill .thn:not(.on):hover{background:var(--cream2);color:var(--text)}
 .pchips{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
 .pchip{background:var(--cream);border:1px solid var(--cream2);border-radius:999px;cursor:pointer;font-size:10.5px;font-weight:700;color:var(--text2);padding:3px 9px}
 .pchip:hover{border-color:var(--gold);color:var(--text)}
@@ -291,6 +295,7 @@ table thead th{cursor:pointer;user-select:none}.sort-ind{opacity:.55;font-size:.
   .prow .del{ font-size:22px; min-height:40px; min-width:32px; }
   .prow .cat .ic{ font-size:14px; }
   .pchip{ font-size:12px; padding:10px 14px; min-height:38px; }
+  .thnpill .thn{ padding:10px 15px; min-height:38px; }
   .tab{ padding:11px 16px; }
   .btn{ height:46px; }
   .agbar .btn-gold{ padding:0 18px; height:46px; }
@@ -1531,7 +1536,7 @@ let agendaLoaded=false, mktLoaded=false, finLoaded=false, finPw='';
 let brandAgenda=null, brandFin=null, brandMkt=null;
 const EN2ID_MON={January:"Januari",February:"Februari",March:"Maret",April:"April",May:"Mei",June:"Juni",July:"Juli",August:"Agustus",September:"September",October:"Oktober",November:"November",December:"Desember"};
 function normMktMonths(o){ if(o&&Array.isArray(o.rows)) o.rows.forEach(r=>{ if(r&&EN2ID_MON[r.month]) r.month=EN2ID_MON[r.month]; }); return o; }
-let agendaViewMode='list', calYear, calMonth, agTlScope='month';
+let agendaViewMode='papan', calYear, calMonth, agTlScope='month';
 const AG_MON=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
 function switchPane(pane){
@@ -1615,37 +1620,17 @@ function renderBrandAgenda(){
       <div class="kpi"><h3>○ Planned</h3><div class="v num">${s.planned}</div></div>
     </div>
     <div class="tabs" style="margin-top:16px">
-      <button class="tab ${agendaViewMode==='list'?'active':''}" id="agViewList">📋 List</button>
       <button class="tab ${agendaViewMode==='calendar'?'active':''}" id="agViewCal">📅 Kalender</button>
-      <button class="tab ${agendaViewMode==='timeline'?'active':''}" id="agViewTl">📊 Timeline</button>
       <button class="tab ${agendaViewMode==='papan'?'active':''}" id="agViewPapan">🗂 Papan</button>
+      <button class="tab ${agendaViewMode==='timeline'?'active':''}" id="agViewTl">📊 Timeline</button>
     </div>`;
   let body;
   if(agendaViewMode==='timeline'){ body=renderAgendaTimeline(det); }
   else if(agendaViewMode==='papan'){ body=renderAgendaPapan(det); }
-  else if(agendaViewMode==='list'){
-    const stOpt=(sel)=>['Task Created','Checklist Created','In Progress','Done'].map(s=>`<option ${agStatusLabel(sel)===agStatusLabel(s)?'selected':''}>${s}</option>`).join('');
-    const rows=det.length?det.map((x)=>{
-      const oSt=agStatusLabel(x.status);
-      return `<tr data-card="${esc(x.card)}" data-sub="${esc(x.subtask)}" data-odl="${esc(x.deadlineISO)||''}" data-onom="${x.nominal||0}" data-ost="${esc(oSt)}">
-      <td>${esc(x.card)||'—'}${x.edited?' <span class="pill" style="background:#ede9fe;color:#5b21b6;font-size:9px">✎</span>':''}</td>
-      <td class="sub">${esc(x.subtask)||'—'}${x.pic?` <span class="muted" style="font-size:10px">· ${esc(x.pic)}</span>`:''}</td>
-      <td><input type="date" class="ag-dl" value="${esc(x.deadlineISO)||''}"></td>
-      <td><input type="number" class="ag-nom" min="0" placeholder="0" value="${x.nominal||''}"></td>
-      <td style="font-size:11px">${oSt==='Done'?'<span style="color:var(--green4)">✓ Selesai</span>':(x.sisaHari==null?'—':(x.sisaHari<0?`<b style="color:var(--red)">${x.sisaHari}h</b>`:x.sisaHari+'h'))}</td>
-      <td><select class="ag-st">${stOpt(x.status)}</select></td></tr>`;
-    }).join(''):'<tr><td colspan="6" class="muted-empty" style="text-align:center;padding:20px">Belum ada agenda.</td></tr>';
-    body=`<div class="note" style="margin:6px 0">✎ Edit <b>tanggal</b>, <b>nominal (Rp)</b>, <b>status</b>, beberapa baris sekaligus → klik <b>Simpan Semua</b>. Langsung berlaku (mengalahkan Trello).<br><span class="muted" style="font-size:11px">Catatan kendala &amp; detail kartu Trello ada di view <b>🗂 Papan</b>.</span></div>
-      <div class="agbar"><button class="btn btn-gold" id="agSaveAll" disabled>💾 Simpan Semua</button><span class="dirtycount" id="agDirty"></span><button class="tab" id="agResetEdit" style="display:none">↺ Batalkan perubahan</button></div>
-      <div class="agedit"><table>
-        <colgroup><col style="width:23%"><col style="width:30%"><col style="width:15%"><col style="width:12%"><col style="width:8%"><col style="width:12%"></colgroup>
-        <thead><tr><th>Card / Agenda</th><th class="sub">Subtask</th><th>Deadline</th><th>Nominal (Rp)</th><th>Sisa</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>`;
-  } else { body=renderAgendaCalendar(det); }
+  else { body=renderAgendaCalendar(det); }
   box.innerHTML=head+body;
   kabarWire(box);
-  if(agendaViewMode==='list') wireAgendaBulk(box);
   if(agendaViewMode==='papan') wireAgendaPapan();
-  $('agViewList').onclick=()=>{agendaViewMode='list';renderBrandAgenda();};
   $('agViewCal').onclick=()=>{agendaViewMode='calendar';renderBrandAgenda();};
   $('agViewTl').onclick=()=>{agendaViewMode='timeline';renderBrandAgenda();};
   $('agViewPapan').onclick=()=>{agendaViewMode='papan';renderBrandAgenda();};
@@ -1670,6 +1655,16 @@ let papanData=null, papanOpen=null, papanDrag=null, papanSort='urut', papanSig=n
 // Agency per kartu. Hanya 3 pilihan; kosong = pekerjaan itu tanpa agency.
 // Design dikerjakan Akronim; foto & video oleh Tenshi Studio atau Holding.
 const PAPAN_AG=['Tenshi Studio','Akronim','Holding'];
+// Papan memperlihatkan satu tahun saja. Tahun kartu ikut tanggal subtask paling
+// awal; kartu tanpa tanggal ikut tahun yang sedang dilihat supaya tidak hilang.
+let papanTahun=new Date().getFullYear();
+function papanTahunAda(){
+  const th={}; th[new Date().getFullYear()]=1; th[new Date().getFullYear()+1]=1;
+  ((brandAgenda&&brandAgenda.detail)||[]).forEach(x=>{
+    const d=String(x.deadlineISO||''); if(d.length>=4) th[+d.slice(0,4)]=1;
+  });
+  return Object.keys(th).map(Number).sort();
+}
 // Usulan budget menunggu keputusan BOD. Sumbernya respons agenda; kalau
 // baru saja diajukan dari laci ini, ditandai lokal dulu (papanUsulBaru)
 // supaya penandanya langsung muncul tanpa perlu muat ulang.
@@ -1765,7 +1760,7 @@ function papanBuild(det){
   return Object.keys(map).map(k=>{
     const c=map[k], dls=c.rows.map(r=>r.dl).filter(Boolean).sort();
     if(dls.length){ c.bulan=PAPAN_MON[+dls[0].slice(5,7)-1]||c.bulan; c.bulan0=c.bulan; }
-    c.tahun=dls.length?dls[0].slice(0,4):String(new Date().getFullYear());
+    c.tahun=dls.length?dls[0].slice(0,4):String(papanTahun);
     const a=papanAgOf(c.card)||{};
     c.ag=String(a.agency||''); c.foto=Number(a.foto)||0; c.video=Number(a.video)||0; c.design=Number(a.design)||0;
     c.ag0=c.ag; c.foto0=c.foto; c.video0=c.video; c.design0=c.design;
@@ -1850,17 +1845,22 @@ function papanTile(c,i){
 }
 function papanBoardHtml(){
   const kini=PAPAN_MON[new Date().getMonth()];
-  const adaTanpa=(papanData||[]).some(c=>!c.bulan);
+  const thn=String(papanTahun);
+  const seTahun=(papanData||[]).filter(c=>String(c.tahun)===thn);
+  const adaTanpa=seTahun.some(c=>!c.bulan);
   const cols=PAPAN_MON.concat(adaTanpa?['(tanpa bulan)']:[]);
   return cols.map(M=>{
-    const list=[]; (papanData||[]).forEach((c,i)=>{ if((c.bulan||'(tanpa bulan)')===M) list.push([c,i]); });
+    const list=[]; (papanData||[]).forEach((c,i)=>{
+      if(String(c.tahun)!==thn) return;
+      if((c.bulan||'(tanpa bulan)')===M) list.push([c,i]);
+    });
     const quiet=!list.length && M!=='(tanpa bulan)';
     const pro=list.reduce((s,p)=>s+p[0].rows.reduce((a,r)=>a+(Number(r.nom)||0),0),0);
     return '<section class="pcol'+(quiet?' quiet':'')+(M===kini?' now':'')+'" data-pcol="'+esc(M)+'">'
       +'<div class="phd"><b>'+esc(M)+'</b><span class="n">'+list.length+'</span>'
       +(quiet?'':'<span class="s">'+fmtRp(pro)+'</span>')+'</div>'
       +'<div class="pstack">'+(papanUrut(list).map(p=>papanTile(p[0],p[1])).join('')
-        ||'<div class="pempty">seret ke sini</div>')+'</div></section>';
+        ||'<div class="pempty">'+(SENTUH?'kosong':'seret ke sini')+'</div>')+'</div></section>';
   }).join('');
 }
 function renderAgendaPapan(det){
@@ -1873,6 +1873,12 @@ function renderAgendaPapan(det){
       ? '<b>Ketuk kartu</b> untuk mengisi tanggal, nominal, status, dan catatan tiap subtask. Untuk memindah bulan, ketuk kartunya lalu ubah <b>Bulan</b> di bagian atas. '
       : '<b>Seret kartu</b> antar bulan untuk menjadwalkan ulang, <b>klik kartu</b> untuk mengisi tanggal, nominal, dan status tiap subtask. ')
     +'Langsung berlaku (mengalahkan Trello).</div>'
+    +'<div class="agbar">'
+    +'<span class="muted" style="font-size:11px">Tahun</span>'
+    +'<span class="thnpill">'+papanTahunAda().map(y=>'<button type="button" class="thn'+(y===papanTahun?' on':'')
+      +'" data-thn="'+y+'">'+y+'</button>').join('')+'</span>'
+    +'<button class="btn" id="pBaru">+ Agenda Baru</button>'
+    +'<span style="flex:1"></span></div>'
     +'<div class="agbar"><button class="btn btn-gold" id="pSave" disabled>💾 Simpan Semua</button>'
     +'<span class="dirtycount" id="pDirty"></span>'
     +'<button class="tab" id="pReset" style="display:none">↺ Batalkan perubahan</button>'
@@ -2167,57 +2173,125 @@ async function papanSimpan(){
     papanData=null; papanSig=null; agendaLoaded=false; loadBrandAgenda();
   }catch(e){ toast('Gagal terhubung ke server.', true); kembali(); }
 }
+// ── Agenda baru dari hub ─────────────────────────────────────
+// Kartu baru tidak perlu dibuat di Trello: handleEditProyeksiBulk_ menulis
+// baris override untuk nama kartu apa pun, dan appendProyBaru_ menyisipkannya
+// kembali saat papan dibaca. Jadi ini murni UI di atas jalur yang sudah ada.
+let papanBaruRows=null;
+function papanBaruBuka(){
+  papanOpen=null;
+  papanBaruRows=[{sub:'',dl:'',nom:0}];
+  $('pDrawHost').innerHTML=papanBaruHtml();
+  papanBaruWire();
+  const f=$('nbNama'); if(f) f.focus();
+}
+function papanBaruHtml(){
+  const bulanOpt=PAPAN_MON.map(m=>'<option>'+m+'</option>').join('');
+  return '<div class="pscrim" data-pclose></div><aside class="pdraw" role="dialog" aria-modal="true">'
+    +'<div class="h"><div style="flex:1;min-width:0"><div class="eb">'+esc(auth.brand)+' \u00b7 tahun '+papanTahun+'</div>'
+    +'<h3>Agenda baru</h3></div><button class="x" data-pclose>&times;</button></div>'
+    +'<div class="b">'
+    +'<div class="psec"><div class="l">Nama agenda</div>'
+    +'<input id="nbNama" placeholder="mis. [MKT] Campaign Imlek" '
+    +'style="width:100%;padding:9px 10px;border:1px solid var(--cream2);border-radius:9px;background:var(--white);color:var(--text);font-size:14px">'
+    +'<div class="muted" style="font-size:11px;margin-top:5px">Pakai awalan yang sama dengan agenda lain brand ini, mis. <b>[MKT]</b> atau <b>[SLS]</b>.</div></div>'
+    +'<div class="psec"><div class="l">Bulan</div>'
+    +'<select id="nbBulan" style="padding:9px 10px;border:1px solid var(--cream2);border-radius:9px;background:var(--white);color:var(--text);font-size:14px">'
+    +bulanOpt+'</select>'
+    +'<div class="muted" style="font-size:11px;margin-top:5px">Dipakai untuk mengisi tanggal subtask yang kamu kosongkan. '
+    +'Kolom papannya sendiri tetap mengikuti tanggal subtask paling awal.</div></div>'
+    +'<div class="psec"><div class="l">Subtask<span class="sp"></span>'
+    +'<button class="pchip" id="nbAdd">+ Baris</button></div>'
+    +'<div id="nbRows"></div>'
+    +'<div class="muted" style="font-size:11px;margin-top:7px">Minimal satu subtask dengan nama. Nominal menerima <b>1,5jt</b> atau <b>1.500.000</b>.</div></div>'
+    +'<div class="psec"><div class="l">Yang terjadi setelah disimpan</div>'
+    +'<div class="muted" style="font-size:11.5px;line-height:1.6">Kartu langsung muncul di papan dan ikut terhitung di Keuangan. '
+    +'Kartu ini tidak dibuat di Trello \u2014 hub cuma punya izin baca. Kalau nanti brand membuat kartu bernama sama di Trello, '
+    +'subtask ini otomatis menempel ke sana, bukan jadi kembar.</div></div>'
+    +'</div>'
+    +'<div class="f"><button class="btn" data-pclose>Batal</button><span style="flex:1"></span>'
+    +'<button class="btn btn-gold" id="nbSimpan">Buat agenda</button></div></aside>';
+}
+function papanBaruRowsHtml(){
+  return papanBaruRows.map(function(r,i){
+    return '<div class="prow" data-nbr="'+i+'"><div class="g1">'
+      +'<input class="ps" value="'+esc(r.sub)+'" placeholder="Nama subtask">'
+      +'<input class="pd" type="date" value="'+esc(r.dl)+'">'
+      +'<input class="pn rp" value="'+(Number(r.nom)>0?fmtNum(r.nom):'')+'" placeholder="0">'
+      +'<select class="pst" disabled><option>Task Created</option></select>'
+      +'<button class="del" data-nbdel="'+i+'" title="Hapus baris">&times;</button>'
+      +'</div></div>';
+  }).join('');
+}
+function papanBaruGambarRows(){
+  const box=$('nbRows'); if(!box) return;
+  box.innerHTML=papanBaruRowsHtml();
+  box.querySelectorAll('[data-nbr]').forEach(function(el){
+    const r=papanBaruRows[+el.dataset.nbr]; if(!r) return;
+    el.querySelector('.ps').oninput=e=>{ r.sub=e.target.value; };
+    el.querySelector('.pd').onchange=e=>{ r.dl=e.target.value; };
+    el.querySelector('.pn').onblur=e=>{ const v=papanRp(e.target.value); r.nom=v; e.target.value=v?fmtNum(v):''; };
+  });
+  box.querySelectorAll('[data-nbdel]').forEach(function(b){
+    b.onclick=()=>{ papanBaruRows.splice(+b.dataset.nbdel,1);
+      if(!papanBaruRows.length) papanBaruRows.push({sub:'',dl:'',nom:0});
+      papanBaruGambarRows(); };
+  });
+}
+function papanBaruWire(){
+  const h=$('pDrawHost');
+  h.onclick=e=>{ if(e.target.closest('[data-pclose]')){ papanBaruRows=null; h.innerHTML=''; } };
+  $('nbBulan').value=PAPAN_MON[new Date().getMonth()];
+  $('nbAdd').onclick=()=>{
+    const last=papanBaruRows[papanBaruRows.length-1];
+    papanBaruRows.push({sub:'',dl:(last&&last.dl)||'',nom:0});
+    papanBaruGambarRows();
+    const inp=document.querySelectorAll('#nbRows .ps'); if(inp.length) inp[inp.length-1].focus();
+  };
+  $('nbSimpan').onclick=papanBaruSimpan;
+  papanBaruGambarRows();
+}
+async function papanBaruSimpan(){
+  const nama=$('nbNama').value.trim();
+  if(!nama){ toast('Nama agenda wajib diisi.', true); $('nbNama').focus(); return; }
+  if((papanData||[]).some(c=>String(c.card).trim().toLowerCase()===nama.toLowerCase())){
+    toast('Nama agenda itu sudah ada di papan.', true); $('nbNama').focus(); return;
+  }
+  const pakai=papanBaruRows.filter(r=>String(r.sub||'').trim());
+  if(!pakai.length){ toast('Isi minimal satu subtask.', true); return; }
+  // Subtask tanpa tanggal diberi akhir bulan pilihan, supaya kartunya punya
+  // tempat di papan dan tidak jatuh ke kolom "(tanpa bulan)".
+  const bi=PAPAN_MON.indexOf($('nbBulan').value);
+  const akhir=new Date(papanTahun, bi+1, 0);
+  const bawaan=akhir.getFullYear()+'-'+String(akhir.getMonth()+1).padStart(2,'0')+'-'+String(akhir.getDate()).padStart(2,'0');
+  const items=pakai.map(r=>({ card:nama, subtask:papanNama(r.sub.trim(), r.dl||bawaan, r.nom),
+    deadline:r.dl||bawaan, nominal:Number(r.nom)||0, status:'Task Created' }));
+  const b=$('nbSimpan'); b.disabled=true; b.textContent='Menyimpan\u2026';
+  try{
+    const res=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({
+      type:'editProyeksiBulk', brand:auth.brand, password:auth.password, items:items })});
+    const j=await res.json();
+    if(!j.success){ toast('Gagal: '+(j.error||''), true); b.disabled=false; b.textContent='Buat agenda'; return; }
+    toast('\u2705 Agenda "'+nama+'" dibuat \u2014 '+items.length+' subtask.');
+    papanBaruRows=null; $('pDrawHost').innerHTML='';
+    papanData=null; papanSig=null; agendaLoaded=false; loadBrandAgenda();
+  }catch(e){
+    toast('Gagal terhubung ke server.', true); b.disabled=false; b.textContent='Buat agenda';
+  }
+}
+
 function wireAgendaPapan(){
   papanWireBoard(); papanRefreshDock();
+  document.querySelectorAll('[data-thn]').forEach(b=>b.onclick=()=>{
+    papanTahun=+b.dataset.thn; papanOpen=null; renderBrandAgenda();
+  });
+  const nb=$('pBaru'); if(nb) nb.onclick=papanBaruBuka;
   document.querySelectorAll('[data-psort]').forEach(b=>b.onclick=()=>{ papanSort=b.dataset.psort; renderBrandAgenda(); });
   const s=$('pSave'), r=$('pReset');
   if(s) s.onclick=papanSimpan;
   if(r) r.onclick=()=>{ papanData=null; papanSig=null; renderBrandAgenda(); toast('Semua perubahan dibatalkan.'); };
 }
 
-// Deteksi baris yang berubah (bandingkan input vs nilai asli di data-*).
-function agRowChanged(tr){
-  const dl=tr.querySelector('.ag-dl').value||'';
-  const nom=String(Number(tr.querySelector('.ag-nom').value||0));
-  const st=agStatusLabel(tr.querySelector('.ag-st').value);
-  return dl!==(tr.dataset.odl||'') || nom!==String(Number(tr.dataset.onom||0)) || st!==(tr.dataset.ost||'');
-}
-function wireAgendaBulk(box){
-  const btn=box.querySelector('#agSaveAll'), cnt=box.querySelector('#agDirty'), reset=box.querySelector('#agResetEdit');
-  const refresh=()=>{
-    let n=0;
-    box.querySelectorAll('.agedit tbody tr').forEach(tr=>{
-      if(!tr.dataset.card) return;
-      const dirty=agRowChanged(tr); tr.classList.toggle('dirty',dirty); if(dirty) n++;
-    });
-    btn.disabled=n===0; cnt.textContent=n?`${n} baris diubah`:''; reset.style.display=n?'':'none';
-    return n;
-  };
-  box.querySelectorAll('.ag-dl,.ag-nom,.ag-st').forEach(el=>{ el.oninput=refresh; el.onchange=refresh; });
-  btn.onclick=()=>saveProyeksiBulk(box);
-  reset.onclick=()=>renderBrandAgenda();
-  refresh();
-}
-// Simpan semua baris yang berubah dalam 1 kirim.
-async function saveProyeksiBulk(box){
-  const items=[];
-  box.querySelectorAll('.agedit tbody tr').forEach(tr=>{
-    if(!tr.dataset.card || !agRowChanged(tr)) return;
-    items.push({ card:tr.dataset.card, subtask:tr.dataset.sub,
-      deadline:tr.querySelector('.ag-dl').value||'',
-      nominal: tr.querySelector('.ag-nom').value===''?'':Number(tr.querySelector('.ag-nom').value),
-      status: tr.querySelector('.ag-st').value });
-  });
-  if(!items.length){ toast('Tidak ada perubahan.'); return; }
-  const btn=box.querySelector('#agSaveAll'); btn.disabled=true; btn.textContent='Menyimpan…';
-  try{
-    const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({
-      type:'editProyeksiBulk', brand:auth.brand, password:auth.password, items:items })});
-    const j=await r.json();
-    if(j.success){ toast('✅ '+(j.count||items.length)+' baris tersimpan — langsung berlaku.'); agendaLoaded=false; loadBrandAgenda(); }
-    else { toast('Gagal: '+(j.error||''), true); btn.disabled=false; btn.textContent='💾 Simpan Semua'; }
-  }catch(e){ toast('Gagal terhubung ke server.', true); btn.disabled=false; btn.textContent='💾 Simpan Semua'; }
-}
 /* Timeline start–end: 1 baris per card, bar dari item paling awal → paling akhir.
    Rentang diambil dari tag [DD MM] checklist (field deadlineISO tiap item).
    agTlScope: 'month' (per bulan, harian) | 'year' (setahun penuh, lintas bulan) */
