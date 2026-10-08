@@ -182,6 +182,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
 .prow.adacat{border-color:var(--gold);background:#fffaf0}
 .prow .gen{margin-top:5px;font-size:10px;color:var(--text3);word-break:break-word}
 .prow .gen code{background:var(--white);padding:1px 4px;border-radius:4px}
+.aglist{display:flex;flex-direction:column;gap:6px}
+.agblok{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 10px;
+ border:1px solid var(--cream2);border-radius:9px;background:var(--cream)}
+.agblok.on{border-color:var(--gold);background:#fffaf0}
+.agblok .agnm{font-weight:700;font-size:12.5px;flex:0 0 118px}
+.agblok .agfs{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.agblok .agf{display:flex;gap:5px;align-items:center;font-size:11.5px;color:var(--text2)}
+@media(max-width:560px){.agblok .agnm{flex-basis:100%}}
 .thnpill{display:inline-flex;border:1.5px solid var(--cream2);border-radius:10px;overflow:hidden;background:var(--white)}
 .thnpill .thn{font:inherit;font-weight:700;font-size:12.5px;border:0;background:transparent;color:var(--text2);padding:7px 13px;cursor:pointer}
 .thnpill .thn.on{background:var(--green);color:var(--cream)}
@@ -1732,8 +1740,13 @@ function papanAktOf(card){
   return rows.find(x=>String(x.card)===String(card))||null;
 }
 function papanAgOf(card){
-  const rows=(brandAgenda&&brandAgenda.agencyKartu)||[];
-  return rows.find(x=>String(x.card)===String(card))||null;
+  const out={};
+  ((brandAgenda&&brandAgenda.agencyKartu)||[]).forEach(function(x){
+    if(String(x.card)!==String(card)) return;
+    const nm=String(x.agency||'').trim(); if(!nm) return;
+    out[nm]={foto:Number(x.foto)||0, video:Number(x.video)||0, design:Number(x.design)||0};
+  });
+  return out;
 }
 
 // Nama subtask di sheet masih membawa tag "[DD MM] -" (kalau parser tanggalnya
@@ -1749,7 +1762,7 @@ function papanBrief(s){
 }
 function papanSigOf(det){
   const ag=((brandAgenda&&brandAgenda.agencyKartu)||[])
-    .map(x=>[x.card,x.agency,x.foto,x.video,x.design].join('|')).join(';')
+    .map(x=>[x.card,x.agency,x.foto,x.video,x.design].join('|')).sort().join(';')
    +'#'+((brandAgenda&&brandAgenda.aktDetail)||[]).map(x=>[x.card,x.act].join('|')).join(';')
    +'#'+((brandAgenda&&brandAgenda.budgetOverrides)||[]).map(x=>[x.card,x.status,x.budget].join('|')).join(';');
   return (det||[]).map(x=>[x.card,x.subtask,x.bulan,x.deadlineISO,x.nominal,x.status,x.catatan,x.urutan].join('')).join('')+'##'+ag;
@@ -1787,16 +1800,15 @@ function papanBuild(det){
         }).map(x=>x.r);
     }
     c.rows.forEach((r,i)=>{ r.ur0=r.ur; r.pos=i; });
-    const a=papanAgOf(c.card)||{};
-    c.ag=String(a.agency||''); c.foto=Number(a.foto)||0; c.video=Number(a.video)||0; c.design=Number(a.design)||0;
-    c.ag0=c.ag; c.foto0=c.foto; c.video0=c.video; c.design0=c.design;
+    c.ags=papanAgOf(c.card);
+    c.ags0=JSON.parse(JSON.stringify(c.ags));
     const ak=papanAktOf(c.card)||{};
     c.akt=Number(ak.act)||0; c.akt0=c.akt;
     return c;
   });
 }
 const papanRowDirty=r=>!!(r.baru||r.sub!==r.sub0||r.dl!==r.dl0||Number(r.nom)!==Number(r.nom0)||r.st!==r.st0||String(r.cat||'')!==String(r.cat0||'')||r.ur!==r.ur0);
-const papanAgDirty=c=>!!(c.ag!==c.ag0||Number(c.foto)!==Number(c.foto0)||Number(c.video)!==Number(c.video0)||Number(c.design)!==Number(c.design0));
+const papanAgDirty=c=>JSON.stringify(c.ags||{})!==JSON.stringify(c.ags0||{});
 const papanAktDirty=c=>Number(c.akt||0)!==Number(c.akt0||0);
 const papanCardDirty=c=>!!(c.bulan!==c.bulan0||papanAgDirty(c)||papanAktDirty(c)||c.rows.some(papanRowDirty));
 const papanDirtyN=()=>(papanData||[]).reduce((n,c)=>n+(papanCardDirty(c)?1:0),0);
@@ -1865,7 +1877,8 @@ function papanTile(c,i){
     +(papanUsulOf(c.card)?'<span class="pb w">usulan menunggu BOD</span>':'')
     +(nonom?'<span class="pb w">'+nonom+' tanpa nominal</span>':'')
     +(telat?'<span class="pb b">'+telat+' lewat</span>':'')
-    +(c.ag?'<span class="pb">'+esc(c.ag)+' '+((Number(c.foto)||0)+(Number(c.video)||0)+(Number(c.design)||0))+'</span>':'')
+    +Object.keys(c.ags||{}).filter(n=>papanAgTotal(c.ags[n])>0)
+       .map(n=>'<span class="pb">'+esc(n)+' '+papanAgTotal(c.ags[n])+'</span>').join('')
     +(papanCardDirty(c)?'<span class="pb e">diubah</span>':'')
     +'</span></button>';
 }
@@ -1981,39 +1994,43 @@ function papanDrawHtml(c){
     +'<div class="f"><button class="btn" data-pclose>Tutup</button><span style="flex:1"></span>'
     +'<button class="btn btn-gold" id="pDone">Selesai</button></div></aside>';
 }
-// Satu kartu = satu agency. Kalau semua output 0, agency boleh kosong
-// (artinya dikerjakan sendiri). Begitu ada output, agency wajib dipilih.
+// Satu kartu boleh memakai beberapa agency sekaligus. Tiap agency punya
+// barisnya sendiri, dan hanya menampilkan output yang memang jadi tugasnya —
+// Akronim mengerjakan Design, Tenshi/Holding mengerjakan Foto & Video.
+// Aturan itu dibikin kelihatan lewat bentuk formnya, bukan lewat larangan.
+const AG_BIDANG={'Tenshi Studio':['foto','video'],'Akronim':['design'],'Holding':['foto','video']};
+const AG_LABEL={foto:'\u{1F4F7} Foto', video:'\u{1F3A5} Video', design:'\u{1F3A8} Design'};
 const AG_INP='width:74px;text-align:right;padding:6px 9px;border:1px solid var(--cream2);border-radius:8px;background:var(--white);color:var(--text);font-size:12.5px';
+
+function papanAgKosong(){ return {foto:0,video:0,design:0}; }
+function papanAgTotal(a){ return (Number(a.foto)||0)+(Number(a.video)||0)+(Number(a.design)||0); }
 function papanAgHtml(c){
   const n=v=>Number(v)?String(Number(v)):'';
+  const blok=PAPAN_AG.map(function(nama){
+    const a=c.ags[nama]||papanAgKosong();
+    const aktif=papanAgTotal(a)>0;
+    const field=AG_BIDANG[nama].map(function(k){
+      return '<label class="agf">'+AG_LABEL[k]
+        +'<input class="agn" type="number" min="0" data-ag="'+esc(nama)+'" data-bid="'+k+'" '
+        +'value="'+n(a[k])+'" style="'+AG_INP+'"></label>';
+    }).join('');
+    return '<div class="agblok'+(aktif?' on':'')+'">'
+      +'<div class="agnm">'+esc(nama)+'</div>'
+      +'<div class="agfs">'+field+'</div></div>';
+  }).join('');
   return '<div class="psec"><div class="l">Agency</div>'
-    +'<select id="pAg" style="padding:6px 9px;border:1px solid var(--cream2);border-radius:8px;background:var(--white);color:var(--text);font-size:12.5px">'
-    +'<option value=""'+(c.ag?'':' selected')+'>&mdash; tanpa agency &mdash;</option>'
-    +PAPAN_AG.map(a=>'<option'+(a===c.ag?' selected':'')+'>'+a+'</option>').join('')+'</select>'
-    +'<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:8px">'
-    +'<label class="muted" style="font-size:11.5px;display:flex;gap:5px;align-items:center">📷 Foto'
-    +'<input id="pFoto" type="number" min="0" value="'+n(c.foto)+'" style="'+AG_INP+'"></label>'
-    +'<label class="muted" style="font-size:11.5px;display:flex;gap:5px;align-items:center">🎥 Video'
-    +'<input id="pVideo" type="number" min="0" value="'+n(c.video)+'" style="'+AG_INP+'"></label>'
-    +'<label class="muted" style="font-size:11.5px;display:flex;gap:5px;align-items:center">🎨 Design'
-    +'<input id="pDesign" type="number" min="0" value="'+n(c.design)+'" style="'+AG_INP+'"></label>'
-    +'</div><div class="muted" id="pAgHint" style="font-size:11px;margin-top:6px"></div></div>';
+    +'<div class="aglist">'+blok+'</div>'
+    +'<div class="muted" style="font-size:11px;margin-top:7px">Isi jumlah output di agency yang mengerjakan. '
+    +'Boleh lebih dari satu. Yang dibiarkan nol berarti tidak dipakai.</div></div>';
 }
-// Aturannya: Akronim cuma mengerjakan Design; Tenshi/Holding cuma foto & video.
-// Kolom yang tidak berlaku dimatikan supaya kombinasinya tidak mungkin salah.
 function papanAgSync(c){
-  const sel=$('pAg'), f=$('pFoto'), v=$('pVideo'), d=$('pDesign'), h=$('pAgHint');
-  if(!sel||!f||!v||!d) return;
-  const a=sel.value, des=(a==='Akronim'), fv=(a&&a!=='Akronim');
-  f.disabled=v.disabled=!fv; d.disabled=!des;
-  [f,v,d].forEach(el=>{ el.style.opacity=el.disabled?'.45':'1'; });
-  if(!a){ f.value=v.value=d.value=''; c.foto=c.video=c.design=0; }
-  else if(des){ f.value=v.value=''; c.foto=c.video=0; }
-  else { d.value=''; c.design=0; }
-  if(h) h.innerHTML = !a ? 'Kosongkan kalau dikerjakan sendiri. Pilih agency dulu untuk mengisi jumlah output.'
-    : des ? '<b>Akronim</b> mengerjakan Design.'
-          : '<b>'+a+'</b> mengerjakan Foto &amp; Video.';
+  const box=$('pDrawHost'); if(!box) return;
+  box.querySelectorAll('.agblok').forEach(function(el){
+    const nama=el.querySelector('.agnm').textContent;
+    el.classList.toggle('on', papanAgTotal(c.ags[nama]||papanAgKosong())>0);
+  });
 }
+
 function papanOpenCard(i){
   const c=(papanData||[])[i]; if(!c) return;
   papanOpen=i;
@@ -2157,9 +2174,15 @@ function papanWireDraw(c){
   $('pAkt').onblur=e=>{ const v=papanRp(e.target.value); c.akt=v;
     e.target.value=v?fmtNum(v):''; papanRefreshMeter(c); papanRefreshDock(); };
   papanAgSync(c);
-  $('pAg').onchange=e=>{ c.ag=e.target.value; papanAgSync(c); papanRefreshDock(); };
-  [['pFoto','foto'],['pVideo','video'],['pDesign','design']].forEach(function(x){
-    $(x[0]).oninput=e=>{ c[x[1]]=Math.max(0,Number(e.target.value)||0); papanRefreshDock(); };
+  h.querySelectorAll('[data-ag]').forEach(function(inp){
+    inp.oninput=function(e){
+      const nama=inp.dataset.ag, bid=inp.dataset.bid;
+      if(!c.ags[nama]) c.ags[nama]=papanAgKosong();
+      c.ags[nama][bid]=Math.max(0,Number(e.target.value)||0);
+      // Agency yang semua outputnya nol dianggap tidak dipakai, tapi barisnya
+      // tetap dikirim supaya nilai lamanya di sheet ikut dinolkan.
+      papanAgSync(c); papanRefreshDock();
+    };
   });
   $('pBudGo').onclick=async ()=>{
     const nilai=papanRp($('pBud').value);
@@ -2238,12 +2261,20 @@ async function papanSimpan(){
       items.push({ card:c.card, subtask:(r.key||r.sub), deadline:r.dl, nominal:Number(r.nom)||0, status:r.st,
         catatan:String(r.cat||''), urutan:(r.ur===null||r.ur===undefined)?undefined:Number(r.ur) });
     });
-    if(papanAgDirty(c)) agItems.push({ card:c.card, bulan:c.bulan, tahun:c.tahun,
-      agency:c.ag||'', foto:Number(c.foto)||0, video:Number(c.video)||0, design:Number(c.design)||0 });
+    if(papanAgDirty(c)){
+      const nama={}; PAPAN_AG.forEach(n=>nama[n]=1);
+      Object.keys(c.ags||{}).forEach(n=>nama[n]=1);
+      Object.keys(c.ags0||{}).forEach(n=>nama[n]=1);
+      Object.keys(nama).forEach(function(n){
+        const a=c.ags[n]||papanAgKosong(), b=(c.ags0||{})[n];
+        if(!b && papanAgTotal(a)===0) return;               // tidak pernah dipakai
+        if(b && JSON.stringify(a)===JSON.stringify(b)) return; // tidak berubah
+        agItems.push({ card:c.card, bulan:c.bulan, tahun:c.tahun, agency:n,
+          foto:Number(a.foto)||0, video:Number(a.video)||0, design:Number(a.design)||0 });
+      });
+    }
     if(papanAktDirty(c)) aktItems.push({ card:c.card, bulan:c.bulan, tahun:c.tahun, aktual:Number(c.akt)||0 });
   });
-  const kurang=agItems.filter(a=>(a.foto||a.video||a.design)&&!a.agency).map(a=>a.card);
-  if(kurang.length){ toast('Agency belum dipilih: '+kurang.join(', '), true); return; }
   if(!items.length && !agItems.length && !aktItems.length){ toast('Tidak ada perubahan.'); return; }
   const b=$('pSave'); b.disabled=true; b.textContent='Menyimpan…';
   const kembali=()=>{ b.disabled=false; b.textContent='💾 Simpan Semua'; };
