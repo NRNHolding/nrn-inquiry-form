@@ -144,8 +144,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
 .psec>.l .sp{flex:1}
 .prow{border:1px solid var(--cream2);border-radius:9px;background:var(--cream);padding:7px 8px;margin-bottom:6px}
 .prow.warn{border-color:var(--gold)}
-.prow .g1{display:grid;grid-template-columns:122px 100px 1fr 24px;gap:5px 6px;align-items:center}
-.prow .g1 .ps{grid-column:1 / -1}
+.prow .g1{display:grid;grid-template-columns:22px 122px 100px 1fr 24px;gap:5px 6px;align-items:center}
+.prow .g1 .ps{grid-column:2 / -1}
+.prow .g1 .grip{grid-row:1;grid-column:1;background:none;border:0;color:var(--text3);cursor:grab;
+ font-size:14px;line-height:1;padding:0;touch-action:none;user-select:none}
+.prow .g1 .grip:hover{color:var(--text)}
+.prow.geser{opacity:.45}
+.prow.sasaran{box-shadow:0 -2px 0 0 var(--gold)}
 .prow input,.prow select{padding:5px 7px;border:1px solid var(--cream2);border-radius:7px;background:var(--white);color:var(--text);font-size:12px;width:100%}
 .prow input.rp{text-align:right}
 .prow .del{background:none;border:0;color:var(--text3);cursor:pointer;font-size:15px;padding:0}
@@ -181,9 +186,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
 .pchip{background:var(--cream);border:1px solid var(--cream2);border-radius:999px;cursor:pointer;font-size:10.5px;font-weight:700;color:var(--text2);padding:3px 9px}
 .pchip:hover{border-color:var(--gold);color:var(--text)}
 @media(max-width:560px){
-  .prow .g1{grid-template-columns:1fr 1fr 24px}
-  .prow .g1 .del{grid-column:3;grid-row:2}
-  .prow .g1 .pst{grid-column:1 / 3}
+  .prow .g1{grid-template-columns:22px 1fr 1fr 24px}
+  .prow .g1 .ps{grid-column:2 / -1}
+  .prow .g1 .pd{grid-column:2}
+  .prow .g1 .del{grid-column:4;grid-row:2}
+  .prow .g1 .pst{grid-column:2 / 4}
 }
 @media(max-width:640px){.papan .pcol{flex-basis:230px}}
 .agbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0}
@@ -288,7 +295,8 @@ table thead th{cursor:pointer;user-select:none}.sort-ind{opacity:.55;font-size:.
    (.tab, .btn, .toolbar select, input.pc) muncul belakangan dan akan
    menimpanya kalau blok ini ditaruh di atas. */
 @media (pointer: coarse){
-  .prow .g1{ grid-template-columns:152px 110px 1fr 30px; }
+  .prow .g1{ grid-template-columns:26px 152px 110px 1fr 30px; }
+  .prow .g1 .grip{ font-size:17px; min-height:40px; }
   .prow input.pc{ font-size:16px; }
   .agbar .tab{ padding:11px 16px; }
   .prow input, .prow select{ font-size:16px; padding:9px 10px; }
@@ -324,7 +332,7 @@ table thead th{cursor:pointer;user-select:none}.sort-ind{opacity:.55;font-size:.
   .papan .pcol.quiet{ flex:0 0 84px; }
 }
 @media (pointer: coarse) and (max-width:560px){
-  .prow .g1{ grid-template-columns:1fr 1fr 30px; }
+  .prow .g1{ grid-template-columns:26px 1fr 1fr 30px; }
 }
 @media (pointer: coarse) and (max-width:700px){
   /* 5 tab yang membungkus memakan hampir separuh layar HP sebelum konten
@@ -1740,7 +1748,7 @@ function papanSigOf(det){
     .map(x=>[x.card,x.agency,x.foto,x.video,x.design].join('|')).join(';')
    +'#'+((brandAgenda&&brandAgenda.aktDetail)||[]).map(x=>[x.card,x.act].join('|')).join(';')
    +'#'+((brandAgenda&&brandAgenda.budgetOverrides)||[]).map(x=>[x.card,x.status,x.budget].join('|')).join(';');
-  return (det||[]).map(x=>[x.card,x.subtask,x.bulan,x.deadlineISO,x.nominal,x.status,x.catatan].join('')).join('')+'##'+ag;
+  return (det||[]).map(x=>[x.card,x.subtask,x.bulan,x.deadlineISO,x.nominal,x.status,x.catatan,x.urutan].join('')).join('')+'##'+ag;
 }
 function papanBuild(det){
   const map={};
@@ -1752,7 +1760,8 @@ function papanBuild(det){
     const raw=String(x.subtask||''), sub=papanBrief(raw);
     const dl=String(x.deadlineISO||''), nom=Number(x.nominal)||0, st=agStatusLabel(x.status);
     const cat=String(x.catatan||'');
-    map[key].rows.push({key:raw,raw:raw,sub:sub,sub0:sub,dl:dl,dl0:dl,nom:nom,nom0:nom,st:st,st0:st,cat:cat,cat0:cat,baru:false});
+    const ur=(x.urutan===null||x.urutan===undefined)?null:Number(x.urutan);
+    map[key].rows.push({key:raw,raw:raw,sub:sub,sub0:sub,dl:dl,dl0:dl,nom:nom,nom0:nom,st:st,st0:st,cat:cat,cat0:cat,ur:ur,baru:false});
   });
   // Kolom mengikuti bulan tanggal subtask paling awal; kalau tak ada tanggal, baru
   // jatuh ke nama list Trello. Tanpa ini kartu yang digeser bulannya balik ke kolom
@@ -1761,6 +1770,19 @@ function papanBuild(det){
     const c=map[k], dls=c.rows.map(r=>r.dl).filter(Boolean).sort();
     if(dls.length){ c.bulan=PAPAN_MON[+dls[0].slice(5,7)-1]||c.bulan; c.bulan0=c.bulan; }
     c.tahun=dls.length?dls[0].slice(0,4):String(papanTahun);
+    // Baris yang sudah punya urutan tersimpan didahulukan; sisanya menyusul
+    // dengan urutan bawaan (deadline), jadi kartu lama tidak berubah tampilan.
+    if(c.rows.some(r=>r.ur!==null)){
+      c.rows=c.rows.map((r,i)=>({r:r,i:i}))
+        .sort((a,b)=>{
+          const A=a.r.ur, B=b.r.ur;
+          if(A!==null && B!==null) return A-B || a.i-b.i;
+          if(A!==null) return -1;
+          if(B!==null) return 1;
+          return a.i-b.i;
+        }).map(x=>x.r);
+    }
+    c.rows.forEach((r,i)=>{ r.ur0=r.ur; r.pos=i; });
     const a=papanAgOf(c.card)||{};
     c.ag=String(a.agency||''); c.foto=Number(a.foto)||0; c.video=Number(a.video)||0; c.design=Number(a.design)||0;
     c.ag0=c.ag; c.foto0=c.foto; c.video0=c.video; c.design0=c.design;
@@ -1769,7 +1791,7 @@ function papanBuild(det){
     return c;
   });
 }
-const papanRowDirty=r=>!!(r.baru||r.sub!==r.sub0||r.dl!==r.dl0||Number(r.nom)!==Number(r.nom0)||r.st!==r.st0||String(r.cat||'')!==String(r.cat0||''));
+const papanRowDirty=r=>!!(r.baru||r.sub!==r.sub0||r.dl!==r.dl0||Number(r.nom)!==Number(r.nom0)||r.st!==r.st0||String(r.cat||'')!==String(r.cat0||'')||r.ur!==r.ur0);
 const papanAgDirty=c=>!!(c.ag!==c.ag0||Number(c.foto)!==Number(c.foto0)||Number(c.video)!==Number(c.video0)||Number(c.design)!==Number(c.design0));
 const papanAktDirty=c=>Number(c.akt||0)!==Number(c.akt0||0);
 const papanCardDirty=c=>!!(c.bulan!==c.bulan0||papanAgDirty(c)||papanAktDirty(c)||c.rows.some(papanRowDirty));
@@ -1902,6 +1924,7 @@ function papanRowHtml(r,idx){
   const s=papanSisa(r.dl), warn=!r.dl||!(Number(r.nom)>0);
   return '<div class="prow'+(warn?' warn':'')+(String(r.cat||'').trim()?' adacat':'')+'" data-pr="'+idx+'">'
     +'<div class="g1">'
+    +'<button class="grip" type="button" data-grip="'+idx+'" aria-label="Seret untuk mengurutkan" title="Seret untuk mengurutkan">⠿</button>'
     +'<input class="ps" value="'+esc(r.sub)+'" placeholder="Nama subtask"'
     +(r.baru?'':' readonly title="Nama subtask ikut Trello — yang bisa diubah di sini tanggal, nominal, dan status."')+'>'
     +'<input class="pd" type="date" value="'+esc(r.dl)+'">'
@@ -2022,6 +2045,72 @@ function papanRefreshRows(c){
   box.innerHTML=c.rows.map((r,i)=>papanRowHtml(r,i)).join('');
   papanWireRows(c); papanRefreshMeter(c); papanRefreshDock();
 }
+// ── Seret-urut subtask ───────────────────────────────────────
+// Pakai Pointer Events, bukan HTML5 drag-and-drop: yang terakhir tidak pernah
+// aktif di browser HP, padahal laci ini banyak dipakai dari HP.
+// Posisi disimpan di kolom "Urutan" sheet override; tanpa itu urutannya kembali
+// mengikuti deadline begitu halaman dimuat ulang.
+let papanGeser=null;
+
+// Pindahkan baris, lalu beri nomor urut ulang ke SEMUA baris kartu itu.
+// Yang benar-benar berubah saja yang nanti terkirim, karena papanRowDirty
+// membandingkan ur dengan ur0.
+function papanPindahBaris(c, dari, ke){
+  if(!c || dari===ke || dari==null || ke==null) return false;
+  if(dari<0 || ke<0 || dari>=c.rows.length || ke>=c.rows.length) return false;
+  const r=c.rows.splice(dari,1)[0];
+  c.rows.splice(ke,0,r);
+  c.rows.forEach((x,i)=>{ x.ur=i+1; });
+  return true;
+}
+
+// Baris sasaran dihitung dari posisi Y terhadap titik tengah tiap baris.
+// Lebih andal daripada elementFromPoint, yang ikut terganggu oleh elemen
+// yang sedang diseret dan oleh hit-test yang meleset saat halaman belum repaint.
+function papanIndexDariY(box, y){
+  const baris=[...box.querySelectorAll('[data-pr]')];
+  for(let i=0;i<baris.length;i++){
+    const b=baris[i].getBoundingClientRect();
+    if(y < b.top + b.height/2) return i;
+  }
+  return baris.length-1;
+}
+
+function papanWireGrip(c){
+  const box=$('pRows'); if(!box) return;
+  box.querySelectorAll('[data-grip]').forEach(function(g){
+    g.onpointerdown=function(ev){
+      if(ev.preventDefault) ev.preventDefault();
+      const baris=g.closest('[data-pr]'); if(!baris) return;
+      papanGeser={dari:+g.dataset.grip, ke:+g.dataset.grip};
+      baris.classList.add('geser');
+      try{ g.setPointerCapture(ev.pointerId); }catch(_){}
+
+      const pindah=function(e){
+        if(!papanGeser) return;
+        const ke=papanIndexDariY(box, e.clientY);
+        if(ke===papanGeser.ke) return;
+        box.querySelectorAll('.sasaran').forEach(x=>x.classList.remove('sasaran'));
+        const el=box.querySelectorAll('[data-pr]')[ke];
+        if(el) el.classList.add('sasaran');
+        papanGeser.ke=ke;
+      };
+      const lepas=function(){
+        g.removeEventListener('pointermove', pindah);
+        g.removeEventListener('pointerup', lepas);
+        g.removeEventListener('pointercancel', lepas);
+        const g2=papanGeser; papanGeser=null;
+        box.querySelectorAll('.sasaran').forEach(x=>x.classList.remove('sasaran'));
+        baris.classList.remove('geser');
+        if(g2 && papanPindahBaris(c, g2.dari, g2.ke)) papanRefreshRows(c);
+      };
+      g.addEventListener('pointermove', pindah);
+      g.addEventListener('pointerup', lepas);
+      g.addEventListener('pointercancel', lepas);
+    };
+  });
+}
+
 function papanWireRows(c){
   const box=$('pRows'); if(!box) return;
   box.querySelectorAll('[data-pr]').forEach(el=>{
@@ -2038,8 +2127,11 @@ function papanWireRows(c){
       el.classList.toggle('adacat', !!e.target.value.trim()); papanRefreshDock(); };
   });
   box.querySelectorAll('[data-pdel]').forEach(b=>b.onclick=()=>{
-    c.rows.splice(+b.dataset.pdel,1); papanRefreshRows(c);
+    c.rows.splice(+b.dataset.pdel,1);
+    c.rows.forEach((x,i)=>{ if(x.ur!==null) x.ur=i+1; });
+    papanRefreshRows(c);
   });
+  papanWireGrip(c);
 }
 function papanGeserBulan(c, ke){
   const from=PAPAN_MON.indexOf(c.bulan), to=PAPAN_MON.indexOf(ke);
@@ -2081,7 +2173,7 @@ function papanWireDraw(c){
   };
   $('pAdd').onclick=()=>{
     const last=c.rows[c.rows.length-1];
-    c.rows.push({key:'',raw:'',sub:'',sub0:'',dl:(last&&last.dl)||'',dl0:'',nom:0,nom0:0,st:'Task Created',st0:'',cat:'',cat0:'',baru:true});
+    c.rows.push({key:'',raw:'',sub:'',sub0:'',dl:(last&&last.dl)||'',dl0:'',nom:0,nom0:0,st:'Task Created',st0:'',cat:'',cat0:'',ur:null,ur0:null,baru:true});
     papanRefreshRows(c);
     const inp=document.querySelectorAll('#pRows .ps'); if(inp.length) inp[inp.length-1].focus();
   };
@@ -2097,7 +2189,7 @@ function papanWireDraw(c){
       const rp=raw.match(/(?:rp|idr)\s*\.?\s*([0-9][0-9.,]*)\s*(jt|juta|rb|ribu|k|miliar|milyar|m)?/i);
       const nom=rp?papanRp(rp[1]+(rp[2]||'')):0;
       const sub=raw.replace(/\[[^\]]*\]\s*/,'').replace(/\(\s*(?:rp|idr)[^)]*\)/ig,'').replace(/^[\s\-]+/,'').trim();
-      c.rows.push({key:'',raw:raw,sub:sub,sub0:'',dl:dl,dl0:'',nom:nom,nom0:0,st:'Task Created',st0:'',cat:'',cat0:'',baru:true});
+      c.rows.push({key:'',raw:raw,sub:sub,sub0:'',dl:dl,dl0:'',nom:nom,nom0:0,st:'Task Created',st0:'',cat:'',cat0:'',ur:null,ur0:null,baru:true});
     });
     papanRefreshRows(c); toast(lines.length+' baris terbaca — tanggal & nominal ikut terisi.');
   };
@@ -2139,7 +2231,8 @@ async function papanSimpan(){
     c.rows.forEach(r=>{
       if(!papanRowDirty(r)) return;
       if(!String(r.sub||'').trim()) return;
-      items.push({ card:c.card, subtask:(r.key||r.sub), deadline:r.dl, nominal:Number(r.nom)||0, status:r.st, catatan:String(r.cat||'') });
+      items.push({ card:c.card, subtask:(r.key||r.sub), deadline:r.dl, nominal:Number(r.nom)||0, status:r.st,
+        catatan:String(r.cat||''), urutan:(r.ur===null||r.ur===undefined)?undefined:Number(r.ur) });
     });
     if(papanAgDirty(c)) agItems.push({ card:c.card, bulan:c.bulan, tahun:c.tahun,
       agency:c.ag||'', foto:Number(c.foto)||0, video:Number(c.video)||0, design:Number(c.design)||0 });
