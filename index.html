@@ -139,6 +139,21 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
 .pdraw .x{background:none;border:0;cursor:pointer;color:var(--text3);font-size:19px;line-height:1;padding:2px 5px}
 .pdraw .b{overflow-y:auto;flex:1;padding:14px 16px 20px}
 .pdraw .f{padding:10px 16px;border-top:1px solid var(--cream2);display:flex;gap:8px;align-items:center}
+.pdraw .f.fdel{background:var(--red-bg);flex-wrap:wrap}
+.pdraw .f.fdel .fq{flex:1 1 230px;font-size:11.5px;color:var(--red);line-height:1.45}
+.pdraw .f.fdel .fbtn{display:flex;gap:8px;margin-left:auto}
+.btn-del{background:var(--red-bg);color:var(--red);border-color:#e8b9b9}
+.btn-del:hover{background:#f0d2d2}
+/* Di dalam baris konfirmasi, latarnya sudah merah muda — tombol "Ya, hapus"
+   harus solid supaya tetap terbaca sebagai tombol, dan lebih menonjol dari Batal. */
+.pdraw .f.fdel .btn-del{background:var(--red);color:#fff;border-color:var(--red)}
+.pdraw .f.fdel .btn-del:hover{background:#7d1c1f}
+.hplist{margin:10px 0 2px;border:1px dashed var(--cream2);border-radius:10px;padding:9px 11px;background:var(--cream)}
+.hplist .l{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:7px}
+.hprow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:5px 0;border-top:1px solid var(--cream2)}
+.hprow:first-of-type{border-top:0}
+.hprow .nm{flex:1;min-width:150px;font-size:12px;word-break:break-word}
+.hprow .wk{font-size:10.5px;color:var(--text3)}
 .psec{margin-bottom:16px}
 .psec>.l{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--amber);margin-bottom:7px;display:flex;align-items:center;gap:8px}
 .psec>.l .sp{flex:1}
@@ -1924,7 +1939,8 @@ function renderAgendaPapan(det){
     +'<span style="flex:1"></span><span class="muted" style="font-size:11px">Urutkan</span>'
     +['urut','tertinggal','selesai'].map(k=>'<button class="tab'+(papanSort===k?' active':'')
       +'" data-psort="'+k+'">'+PAPAN_SORT_LBL[k]+'</button>').join('')+'</div>'
-    +'<div class="papan" id="papanBoard">'+papanBoardHtml()+'</div><div id="pDrawHost"></div>';
+    +'<div class="papan" id="papanBoard">'+papanBoardHtml()+'</div>'
+    +papanHapusHtml()+'<div id="pDrawHost"></div>';
 }
 function papanRefreshDock(){
   const b=$('pSave'), c=$('pDirty'), r=$('pReset'); if(!b) return;
@@ -1991,8 +2007,14 @@ function papanDrawHtml(c){
     +'</div>'
     +papanDetHtml(c)
     +'</div>'
-    +'<div class="f"><button class="btn" data-pclose>Tutup</button><span style="flex:1"></span>'
-    +'<button class="btn btn-gold" id="pDone">Selesai</button></div></aside>';
+    +'<div class="f" id="pFootA"><button class="btn btn-del" id="pHapus">\u{1F5D1} Hapus agenda</button>'
+    +'<button class="btn" data-pclose>Tutup</button><span style="flex:1"></span>'
+    +'<button class="btn btn-gold" id="pDone">Selesai</button></div>'
+    +'<div class="f fdel" id="pFootB" style="display:none">'
+    +'<span class="fq">Hapus <b>'+esc(c.card)+'</b> dari hub? '+c.rows.length+' subtask, catatan, agency, dan budgetnya ikut hilang dari tampilan. '
+    +'Kartu di Trello tidak disentuh, dan ini bisa dipulihkan lagi dari papan.</span>'
+    +'<span class="fbtn"><button class="btn" id="pBatalHapus">Batal</button>'
+    +'<button class="btn btn-del" id="pYaHapus">Ya, hapus</button></span></div></aside>';
 }
 // Satu kartu boleh memakai beberapa agency sekaligus. Tiap agency punya
 // barisnya sendiri, dan hanya menampilkan output yang memang jadi tugasnya —
@@ -2230,6 +2252,9 @@ function papanWireDraw(c){
     papanRefreshRows(c); toast(k==='eom'?'Semua tanggal ke akhir bulannya.':('Semua tanggal +'+k+' hari.'));
   });
   $('pDone').onclick=papanCloseDraw;
+  $('pHapus').onclick=()=>{ $('pFootA').style.display='none'; $('pFootB').style.display=''; };
+  $('pBatalHapus').onclick=()=>{ $('pFootB').style.display='none'; $('pFootA').style.display=''; };
+  $('pYaHapus').onclick=()=>papanHapus(c);
   papanWireRows(c);
 }
 function papanWireBoard(){
@@ -2408,12 +2433,55 @@ async function papanBaruSimpan(){
   }
 }
 
+// ── Hapus agenda ─────────────────────────────────────────────
+// Hub cuma punya izin baca ke Trello, jadi "hapus" artinya kartu berhenti
+// ditampilkan dan berhenti ikut dihitung di hub. Baris override/agency/aktual
+// kartunya sengaja ditinggal di sheet supaya "Pulihkan" mengembalikan utuh.
+async function papanHapus(c){
+  const b=$('pYaHapus'); b.disabled=true; b.textContent='Menghapus\u2026';
+  try{
+    const res=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({
+      type:'hapusAgenda', brand:auth.brand, password:auth.password, card:c.card })});
+    const j=await res.json();
+    if(!j.success){ toast('Gagal: '+(j.error||''), true); b.disabled=false; b.textContent='Ya, hapus'; return; }
+    toast('\u{1F5D1} "'+c.card+'" dihapus dari hub \u2014 bisa dipulihkan di bawah papan.');
+    papanOpen=null; $('pDrawHost').innerHTML='';
+    papanData=null; papanSig=null; agendaLoaded=false; loadBrandAgenda();
+  }catch(e){
+    toast('Gagal terhubung ke server.', true); b.disabled=false; b.textContent='Ya, hapus';
+  }
+}
+async function papanPulihkan(card, btn){
+  btn.disabled=true; btn.textContent='Memulihkan\u2026';
+  try{
+    const res=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({
+      type:'hapusAgenda', brand:auth.brand, password:auth.password, card:card, pulihkan:true })});
+    const j=await res.json();
+    if(!j.success){ toast('Gagal: '+(j.error||''), true); btn.disabled=false; btn.textContent='Pulihkan'; return; }
+    toast('\u21ba "'+card+'" dipulihkan.');
+    papanData=null; papanSig=null; agendaLoaded=false; loadBrandAgenda();
+  }catch(e){
+    toast('Gagal terhubung ke server.', true); btn.disabled=false; btn.textContent='Pulihkan';
+  }
+}
+function papanHapusHtml(){
+  const hp=((brandAgenda&&brandAgenda.kartuDihapus)||[]);
+  if(!hp.length) return '';
+  return '<div class="hplist"><div class="l">\u{1F5D1} Agenda dihapus \u00b7 '+hp.length+'</div>'
+    +hp.map(o=>'<div class="hprow"><span class="nm">'+esc(o.card)+'</span>'
+      +'<span class="wk">'+esc(o.kapan||'')+(o.oleh?(' \u00b7 '+esc(o.oleh)):'')+'</span>'
+      +'<button class="tab" data-pulih="'+esc(o.card)+'">Pulihkan</button></div>').join('')
+    +'<div class="muted" style="font-size:11px;margin-top:7px">Kartunya tidak dihapus dari Trello \u2014 '
+    +'yang hilang cuma tampilan dan hitungannya di hub.</div></div>';
+}
+
 function wireAgendaPapan(){
   papanWireBoard(); papanRefreshDock();
   document.querySelectorAll('[data-thn]').forEach(b=>b.onclick=()=>{
     papanTahun=+b.dataset.thn; papanOpen=null; renderBrandAgenda();
   });
   const nb=$('pBaru'); if(nb) nb.onclick=papanBaruBuka;
+  document.querySelectorAll('[data-pulih]').forEach(b=>b.onclick=()=>papanPulihkan(b.dataset.pulih, b));
   document.querySelectorAll('[data-psort]').forEach(b=>b.onclick=()=>{ papanSort=b.dataset.psort; renderBrandAgenda(); });
   const s=$('pSave'), r=$('pReset');
   if(s) s.onclick=papanSimpan;
