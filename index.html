@@ -174,6 +174,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
 .prow input.rp{text-align:right}
 .prow .del{background:none;border:0;color:var(--text3);cursor:pointer;font-size:15px;padding:0}
 .prow .del:hover{color:var(--red)}
+/* Status yang masih ikut Trello dibedakan dari yang sudah dikunci manual. */
+.prow select.pst.oto{background:#f3f7f2;border-style:dashed;color:var(--text2)}
 .kabar{margin:0 0 12px;border-radius:10px;border:1px solid var(--cream2);overflow:hidden}
 .kabar .baris{display:flex;gap:10px;align-items:flex-start;padding:10px 13px;border-bottom:1px solid var(--cream2);font-size:12.5px;line-height:1.5}
 .kabar .baris:last-child{border-bottom:0}
@@ -1980,7 +1982,11 @@ function papanBuild(det){
     const dl=String(x.deadlineISO||''), nom=Number(x.nominal)||0, st=agStatusLabel(x.status);
     const cat=String(x.catatan||'');
     const ur=(x.urutan===null||x.urutan===undefined)?null:Number(x.urutan);
-    map[key].rows.push({key:raw,raw:raw,sub:sub,sub0:sub,dl:dl,dl0:dl,nom:nom,nom0:nom,st:st,st0:st,cat:cat,cat0:cat,ur:ur,baru:false});
+    // Status kosong di sheet override = ikut Trello. Yang dikunci manual ditandai
+    // supaya bisa dilepas lagi, dan status Trello aslinya tetap kelihatan.
+    const stT=agStatusLabel(x.statusTrello||''), oto=!x.statusManual;
+    map[key].rows.push({key:raw,raw:raw,sub:sub,sub0:sub,dl:dl,dl0:dl,nom:nom,nom0:nom,
+      st:st,st0:st,stT:(x.statusTrello?stT:''),oto:oto,oto0:oto,cat:cat,cat0:cat,ur:ur,baru:false});
   });
   // Kolom mengikuti bulan tanggal subtask paling awal; kalau tak ada tanggal, baru
   // jatuh ke nama list Trello. Tanpa ini kartu yang digeser bulannya balik ke kolom
@@ -2012,7 +2018,8 @@ function papanBuild(det){
     return c;
   });
 }
-const papanRowDirty=r=>!!(r.baru||r.sub!==r.sub0||r.dl!==r.dl0||Number(r.nom)!==Number(r.nom0)||r.st!==r.st0||String(r.cat||'')!==String(r.cat0||'')||r.ur!==r.ur0);
+const papanRowDirty=r=>!!(r.baru||r.sub!==r.sub0||r.dl!==r.dl0||Number(r.nom)!==Number(r.nom0)
+  ||r.st!==r.st0||!!r.oto!==!!r.oto0||String(r.cat||'')!==String(r.cat0||'')||r.ur!==r.ur0);
 const papanAgDirty=c=>JSON.stringify(c.ags||{})!==JSON.stringify(c.ags0||{});
 const papanAktDirty=c=>Number(c.akt||0)!==Number(c.akt0||0);
 const papanNoteDirty=c=>String(c.note||'')!==String(c.note0||'');
@@ -2146,6 +2153,17 @@ function papanRedraw(){
   papanRefreshDock();
 }
 
+// Status sebenarnya sudah otomatis dari Trello (item dicentang = Done). Yang
+// bikin beku: begitu satu baris diedit, status ikut tertulis ke sheet override
+// dan sejak itu menang terus atas Trello. Keterangan ini bikin keadaannya
+// kelihatan, dan kalau Trello sudah beda, menawarkan jalan kembalinya.
+function papanStKet(r){
+  if(r.baru) return '';
+  if(r.oto) return ' \u00b7 <b>status otomatis</b> dari Trello';
+  if(r.stT && r.stT!==r.st) return ' \u00b7 status dikunci <b>'+esc(r.st)+'</b>,'
+    +' padahal Trello bilang <b>'+esc(r.stT)+'</b> \u2014 pilih \u27f3 Otomatis untuk ikut lagi';
+  return ' \u00b7 status diatur manual';
+}
 function papanRowHtml(r,idx){
   const s=papanSisa(r.dl), warn=!r.dl||!(Number(r.nom)>0);
   return '<div class="prow'+(warn?' warn':'')+(String(r.cat||'').trim()?' adacat':'')+'" data-pr="'+idx+'">'
@@ -2155,7 +2173,9 @@ function papanRowHtml(r,idx){
     +(r.baru?'':' title="Judul yang kamu ketik dipakai di hub. Nama aslinya di Trello tetap seperti di bawah."')+'>'
     +'<input class="pd" type="date" value="'+esc(r.dl)+'">'
     +'<input class="pn rp" value="'+(Number(r.nom)>0?fmtNum(r.nom):'')+'" placeholder="0">'
-    +'<select class="pst">'+PAPAN_ST.map(o=>'<option'+(o===r.st?' selected':'')+'>'+o+'</option>').join('')+'</select>'
+    +'<select class="pst'+(r.oto?' oto':'')+'">'
+    +(r.stT?('<option value=""'+(r.oto?' selected':'')+'>⟳ Otomatis · '+esc(r.stT)+'</option>'):'')
+    +PAPAN_ST.map(o=>'<option value="'+o+'"'+(!r.oto&&o===r.st?' selected':'')+'>'+o+'</option>').join('')+'</select>'
     +'<button class="del" data-pdel="'+idx+'" title="Hapus baris">&times;</button>'
     +'</div>'
     +'<div class="cat"><span class="ic">📝</span>'
@@ -2163,7 +2183,8 @@ function papanRowHtml(r,idx){
     +'<div class="gen">'+(r.baru
        ? ('akan ditulis: <code>'+esc(papanNama(r.sub,r.dl,r.nom))+'</code>')
        : ('dari Trello: <code>'+esc(r.raw||r.sub)+'</code>'+(r.sub!==papanBrief(r.raw||'')?' · judul diubah':'')))
-    +(s===null?' · tanpa tanggal':(' · '+(s<0?((-s)+' hari lewat'):(s+' hari lagi'))))+'</div>'
+    +(s===null?' · tanpa tanggal':(' · '+(s<0?((-s)+' hari lewat'):(s+' hari lagi'))))
+    +papanStKet(r)+'</div>'
     +'</div>';
 }
 // ── Catatan agenda (level kartu) ─────────────────────────────
@@ -2288,7 +2309,9 @@ function papanDrawHtml(c){
     +'<button class="pchip" id="pAdd">+ Baris</button></div>'
     +'<div class="pchips"><button class="pchip" data-pb="7">Semua +7 hari</button>'
     +'<button class="pchip" data-pb="30">Semua +1 bulan</button>'
-    +'<button class="pchip" data-pb="eom">Semua ke akhir bulan</button></div>'
+    +'<button class="pchip" data-pb="eom">Semua ke akhir bulan</button>'
+    +(c.rows.some(r=>!r.baru&&r.stT&&!r.oto)
+       ? '<button class="pchip" id="pOto">⟳ Semua status ikut Trello</button>' : '')+'</div>'
     +'<div id="pRows">'+c.rows.map((r,i)=>papanRowHtml(r,i)).join('')+'</div>'
     +'<div class="muted" style="font-size:11px;margin-top:7px">Nominal menerima <b>1,5jt</b>, <b>500rb</b>, atau <b>1.500.000</b>.</div>'
     +'</div>'
@@ -2450,7 +2473,14 @@ function papanWireRows(c){
     const nm=el.querySelector('.ps');
     nm.oninput=e=>{ r.sub=e.target.value; upd(); };
     el.querySelector('.pd').onchange=e=>{ r.dl=e.target.value; papanRefreshRows(c); };
-    el.querySelector('.pst').onchange=e=>{ r.st=e.target.value; papanRefreshDock(); };
+    const stSel=el.querySelector('.pst');
+    stSel.onchange=e=>{
+      // Nilai kosong = lepas lagi ke Trello. Status tampilannya langsung ikut
+      // apa yang Trello bilang, supaya efeknya kelihatan tanpa simpan dulu.
+      r.oto = e.target.value==='';
+      if(r.oto) r.st = r.stT || r.st; else r.st = e.target.value;
+      papanRefreshRows(c);
+    };
     rpWire(el.querySelector('.pn'), v=>{ r.nom=v; upd(); papanRefreshMeter(c); });
     el.querySelector('.pc').oninput=e=>{ r.cat=e.target.value;
       el.classList.toggle('adacat', !!e.target.value.trim()); papanRefreshDock(); };
@@ -2514,7 +2544,7 @@ function papanWireDraw(c){
   };
   $('pAdd').onclick=()=>{
     const last=c.rows[c.rows.length-1];
-    c.rows.push({key:'',raw:'',sub:'',sub0:'',dl:(last&&last.dl)||'',dl0:'',nom:0,nom0:0,st:'Task Created',st0:'',cat:'',cat0:'',ur:null,ur0:null,baru:true});
+    c.rows.push({key:'',raw:'',sub:'',sub0:'',dl:(last&&last.dl)||'',dl0:'',nom:0,nom0:0,st:'Task Created',st0:'',stT:'',oto:false,oto0:false,cat:'',cat0:'',ur:null,ur0:null,baru:true});
     papanRefreshRows(c);
     const inp=document.querySelectorAll('#pRows .ps'); if(inp.length) inp[inp.length-1].focus();
   };
@@ -2530,7 +2560,7 @@ function papanWireDraw(c){
       const rp=raw.match(/(?:rp|idr)\s*\.?\s*([0-9][0-9.,]*)\s*(jt|juta|rb|ribu|k|miliar|milyar|m)?/i);
       const nom=rp?papanRp(rp[1]+(rp[2]||'')):0;
       const sub=raw.replace(/\[[^\]]*\]\s*/,'').replace(/\(\s*(?:rp|idr)[^)]*\)/ig,'').replace(/^[\s\-]+/,'').trim();
-      c.rows.push({key:'',raw:raw,sub:sub,sub0:'',dl:dl,dl0:'',nom:nom,nom0:0,st:'Task Created',st0:'',cat:'',cat0:'',ur:null,ur0:null,baru:true});
+      c.rows.push({key:'',raw:raw,sub:sub,sub0:'',dl:dl,dl0:'',nom:nom,nom0:0,st:'Task Created',st0:'',stT:'',oto:false,oto0:false,cat:'',cat0:'',ur:null,ur0:null,baru:true});
     });
     papanRefreshRows(c); toast(lines.length+' baris terbaca — tanggal & nominal ikut terisi.');
   };
@@ -2543,6 +2573,13 @@ function papanWireDraw(c){
     });
     papanRefreshRows(c); toast(k==='eom'?'Semua tanggal ke akhir bulannya.':('Semua tanggal +'+k+' hari.'));
   });
+  const oto=$('pOto');
+  if(oto) oto.onclick=()=>{
+    let n=0;
+    c.rows.forEach(r=>{ if(r.baru||!r.stT||r.oto) return; r.oto=true; r.st=r.stT; n++; });
+    papanRefreshRows(c);
+    toast(n+' status dilepas — ikut Trello lagi setelah Simpan.');
+  };
   $('pDone').onclick=papanCloseDraw;
   $('pHapus').onclick=()=>{ $('pFootA').style.display='none'; $('pFootB').style.display=''; };
   $('pBatalHapus').onclick=()=>{ $('pFootB').style.display='none'; $('pFootA').style.display=''; };
@@ -2580,7 +2617,10 @@ async function papanSimpan(){
       // tetap nama mentahnya. Judul hasil ketikan masuk kolom terpisah, dan
       // dikosongkan lagi kalau sudah sama dengan nama aslinya.
       const asli=papanBrief(r.raw||'');
-      items.push({ card:c.card, subtask:(r.key||r.sub), deadline:r.dl, nominal:Number(r.nom)||0, status:r.st,
+      items.push({ card:c.card, subtask:(r.key||r.sub), deadline:r.dl, nominal:Number(r.nom)||0,
+        // Status kosong = lepas ke Trello. Ini juga yang bikin mengedit tanggal
+        // tidak lagi ikut membekukan statusnya.
+        status:(r.oto?'':r.st),
         catatan:String(r.cat||''), namaTampil:(r.sub===asli?'':String(r.sub||'')),
         urutan:(r.ur===null||r.ur===undefined)?undefined:Number(r.ur) });
     });
