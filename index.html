@@ -212,6 +212,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
 .pchips{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
 .pchip{background:var(--cream);border:1px solid var(--cream2);border-radius:999px;cursor:pointer;font-size:10.5px;font-weight:700;color:var(--text2);padding:3px 9px}
 .pchip:hover{border-color:var(--gold);color:var(--text)}
+.pchip.on{background:var(--gold);border-color:var(--gold);color:#3a2a10}
 @media(max-width:560px){
   .prow .g1{grid-template-columns:22px 1fr 1fr 24px}
   .prow .g1 .ps{grid-column:2 / -1}
@@ -318,6 +319,44 @@ tr.lap-soon td{background:#fffaeb}
 .modal h2{font-family:'DM Serif Display',serif;font-size:20px;color:var(--green);font-weight:400;margin-bottom:3px}
 .modal .muted{color:var(--text3);font-size:12.5px;margin-bottom:14px}
 table thead th{cursor:pointer;user-select:none}.sort-ind{opacity:.55;font-size:.85em}
+/* Awalan [MKT]/[SLS] ditampilkan sebagai label, bukan bagian judul. */
+.katchip{display:inline-block;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;font-weight:700;
+  padding:2px 7px;border-radius:999px;background:var(--cream2);color:var(--text2);margin-right:7px;vertical-align:middle}
+.katchip.kcl{font-size:8.5px;padding:1px 6px;margin-right:5px}
+.katchip[data-kat="MKT"]{background:#dceadb;color:#2f5131}
+.katchip[data-kat="SLS"]{background:#fde8c8;color:#7f5000}
+.katchip[data-kat="PRD"]{background:#dde6f5;color:#2a4a7a}
+.katchip[data-kat="EVT"]{background:#f1dcf0;color:#6b2a68}
+.katchip[data-kat="OPS"]{background:#e3e3dd;color:#4a4a42}
+.katchip[data-kat="CS"]{background:#d9eceb;color:#245c59}
+.pnotemark{font-size:9.5px;color:var(--text3);margin-left:6px;white-space:nowrap}
+.rpbaca{display:block;font-size:11px;color:var(--text3);margin-top:5px;min-height:14px}
+span.rpbaca{display:inline;margin-top:0}
+.pnote{width:100%;box-sizing:border-box;font-family:inherit;font-size:13px;line-height:1.55;color:var(--text);
+  padding:9px 11px;border:1px solid var(--cream2);border-radius:9px;background:var(--white);resize:vertical;min-height:84px}
+.pnote:focus{outline:2px solid var(--gold);outline-offset:-1px}
+.lampgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:9px}
+.lamp{position:relative;margin:0;border:1px solid var(--cream2);border-radius:9px;overflow:hidden;background:var(--white)}
+.lamp img{display:block;width:100%;height:96px;object-fit:cover;background:var(--cream)}
+.lamp figcaption{padding:5px 7px;font-size:10px;line-height:1.35;color:var(--text2);word-break:break-word}
+.lamp figcaption b{display:block;font-weight:600}
+.lamp figcaption span{color:var(--text3)}
+.lampx{position:absolute;top:4px;right:4px;width:22px;height:22px;border:0;border-radius:6px;cursor:pointer;
+  background:rgba(255,255,255,.92);color:var(--red);font-size:16px;line-height:1;padding:0}
+.lampx:hover{background:var(--red-bg)}
+.lampx:disabled{opacity:.5;cursor:default}
+/* Kotak "apa yang berubah sejak terakhir dibuka" */
+.riw{border:1px solid var(--cream2);border-left:4px solid var(--gold);border-radius:10px;background:var(--white);
+  padding:11px 13px;margin:8px 0}
+.riw .rh{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:7px}
+.riw .rh b{font-size:13px}
+.riw .rl{max-height:206px;overflow-y:auto}
+.riw .rr{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;padding:4px 0;border-top:1px solid var(--cream);font-size:11.5px}
+.riw .rr:first-child{border-top:0}
+.riw .rr .w{color:var(--text3);font-size:10.5px;white-space:nowrap;min-width:78px}
+.riw .rr .c{font-weight:600;flex:1;min-width:120px}
+.riw .rr .d{color:var(--text2)}
+.riw .rr .d i{font-style:normal;color:var(--text3);text-decoration:line-through}
 /* Blok sentuh sengaja diletakkan paling akhir: beberapa aturan dasar
    (.tab, .btn, .toolbar select, input.pc) muncul belakangan dan akan
    menimpanya kalau blok ini ditaruh di atas. */
@@ -330,6 +369,11 @@ table thead th{cursor:pointer;user-select:none}.sort-ind{opacity:.55;font-size:.
   .prow .del{ font-size:22px; min-height:40px; min-width:32px; }
   .prow .cat .ic{ font-size:14px; }
   .pchip{ font-size:12px; padding:10px 14px; min-height:38px; }
+  .pnote{ font-size:16px; padding:11px 12px; }
+  .lampx{ width:38px; height:38px; font-size:21px; }
+  .lampgrid{ grid-template-columns:repeat(auto-fill,minmax(118px,1fr)); }
+  .riw .tab{ padding:11px 16px; }
+  .katchip{ font-size:10.5px; padding:3px 8px; }
   .thnpill .thn{ padding:10px 15px; min-height:38px; }
   .tab{ padding:11px 16px; }
   .btn{ height:46px; }
@@ -1644,9 +1688,76 @@ function kabarWire(box){
     };
   });
 }
+// ── Riwayat: apa yang berubah sejak terakhir buka ─────────────
+// Patokannya waktu terakhir kotak ini ditandai dibaca, disimpan per brand di
+// browser ini. Jadi sifatnya pengingat pribadi, bukan notifikasi bersama.
+const RIW_KUNCI = b => 'nrnRiwayatDibaca:' + b;
+function riwTerakhir(){
+  try{ return localStorage.getItem(RIW_KUNCI(auth.brand)) || ''; }catch(_){ return ''; }
+}
+function riwTandai(){
+  const r=((brandAgenda&&brandAgenda.riwayat)||[]);
+  const paling=r.length?String(r[0].waktu||''):'';
+  try{ localStorage.setItem(RIW_KUNCI(auth.brand), paling||new Date().toISOString()); }catch(_){}
+}
+function riwBaru(){
+  const batas=riwTerakhir();
+  const r=((brandAgenda&&brandAgenda.riwayat)||[]);
+  if(!batas) return r.slice(0, 12);   // pertama kali buka: tampilkan yang terbaru saja
+  return r.filter(x=>String(x.waktu||'') > batas);
+}
+function riwBarisHtml(x){
+  // Bidang uang disimpan sebagai angka mentah di log; dibaca lebih enak
+  // kalau ditampilkan sebagai rupiah.
+  const uang=/nominal|aktual|budget/i.test(String(x.bidang||''));
+  const rapi=v=>{ const t=String(v||''); return (uang && /^[0-9]+$/.test(t)) ? fmtRp(+t) : t; };
+  const dari=rapi(x.dari), jadi=rapi(x.jadi);
+  const nilai = dari ? ('<i>'+esc(dari)+'</i> \u2192 '+esc(jadi)) : esc(jadi);
+  const sub = x.subtask ? (' \u00b7 '+esc(papanBrief(x.subtask))) : '';
+  return '<div class="rr"><span class="w">'+esc(x.label||'')+'</span>'
+    +'<span class="c">'+papanKatChip(x.card, true)+esc(papanJudul(x.card))+sub+'</span>'
+    +'<span class="d">'+esc(x.bidang||'')+': '+nilai+'</span></div>';
+}
+function riwHtml(){
+  const baru=riwBaru();
+  if(!baru.length) return '';
+  const batas=riwTerakhir();
+  return '<div class="riw" id="riwBox"><div class="rh">'
+    +'<b>\u{1F514} '+baru.length+' perubahan'+(batas?' sejak terakhir kamu buka':' terbaru')+'</b>'
+    +'<span style="flex:1"></span>'
+    +'<button class="tab" id="riwOk">Tandai sudah dibaca</button></div>'
+    +'<div class="rl">'+baru.map(riwBarisHtml).join('')+'</div></div>';
+}
+function riwWire(){
+  const b=document.getElementById('riwOk');
+  if(b) b.onclick=()=>{ riwTandai(); const k=document.getElementById('riwBox'); if(k) k.remove(); };
+}
+
+// ── Esc menutup laci/overlay yang sedang terbuka ──────────────
+document.addEventListener('keydown', function(e){
+  if(e.key!=='Escape' && e.key!=='Esc') return;
+  const h=document.getElementById('pDrawHost');
+  if(h && h.innerHTML.trim()){
+    // Baris konfirmasi hapus ditutup dulu, baru lacinya — supaya Esc tidak
+    // langsung membuang konteks waktu orang sedang ragu.
+    const fb=document.getElementById('pFootB');
+    if(fb && fb.style.display!=='none'){
+      fb.style.display='none';
+      const fa=document.getElementById('pFootA'); if(fa) fa.style.display='';
+      return;
+    }
+    if(typeof papanBaruRows!=='undefined' && papanBaruRows){ papanBaruRows=null; h.innerHTML=''; }
+    else papanCloseDraw();
+    e.preventDefault();
+    return;
+  }
+  const ov=document.getElementById('ovEdit');
+  if(ov && ov.classList.contains('show')){ ov.classList.remove('show'); e.preventDefault(); }
+});
+
 function renderBrandAgenda(){
   const box=$('pane-agenda'), s=brandAgenda.summary, det=brandAgenda.detail||[];
-  const head=kabarHtml()+`
+  const head=kabarHtml()+riwHtml()+`
     <div class="section-title">📌 Agenda — ${esc(brandAgenda.brand)}</div>
     <div class="kpis">
       <div class="kpi"><h3>Total Agenda</h3><div class="v num">${s.total}</div></div>
@@ -1664,7 +1775,7 @@ function renderBrandAgenda(){
   else if(agendaViewMode==='papan'){ body=renderAgendaPapan(det); }
   else { body=renderAgendaCalendar(det); }
   box.innerHTML=head+body;
-  kabarWire(box);
+  kabarWire(box); riwWire();
   if(agendaViewMode==='papan') wireAgendaPapan();
   $('agViewCal').onclick=()=>{agendaViewMode='calendar';renderBrandAgenda();};
   $('agViewTl').onclick=()=>{agendaViewMode='timeline';renderBrandAgenda();};
@@ -1775,6 +1886,80 @@ function papanBrief(s){
     .replace(/\s{2,}/g,' ').trim();
   return t || String(s||'').trim();
 }
+// ── Kategori dari awalan [MKT]/[SLS] ─────────────────────────
+// Judul kartu di Trello memakai awalan kurung siku. Di hub awalan itu dipisah
+// jadi label supaya judulnya bersih, dan waktu bikin agenda baru kodenya
+// dipilih lewat tombol — bukan diketik manual.
+const PAPAN_KAT=[
+  {kode:'MKT', label:'Marketing'},
+  {kode:'SLS', label:'Sales'},
+  {kode:'PRD', label:'Produk'},
+  {kode:'EVT', label:'Event'},
+  {kode:'OPS', label:'Operasional'},
+  {kode:'CS',  label:'Customer'}
+];
+const PAPAN_KAT_PETA=(function(){ const m={}; PAPAN_KAT.forEach(k=>m[k.kode]=k.label); return m; })();
+function papanKat(card){
+  const m=String(card||'').match(/^\s*\[([^\]]+)\]\s*(.*)$/);
+  if(!m) return {kode:'', label:'', bersih:String(card||'').trim()};
+  const kode=m[1].trim().toUpperCase(), sisa=m[2].trim();
+  return {kode:kode, label:PAPAN_KAT_PETA[kode]||kode, bersih:sisa||String(card||'').trim()};
+}
+function papanKatChip(card, kecil){
+  const k=papanKat(card);
+  if(!k.kode) return '';
+  return '<span class="katchip'+(kecil?' kcl':'')+'" data-kat="'+esc(k.kode)+'">'+esc(k.label)+'</span>';
+}
+function papanJudul(card){ return papanKat(card).bersih; }
+
+// ── Nominal rupiah ───────────────────────────────────────────
+// Sambil diketik angkanya langsung dikelompokkan (1.500.000). Kalau yang
+// diketik mengandung huruf/koma ("1,5jt") dibiarkan utuh dulu, baru
+// diterjemahkan waktu blur — supaya jalan pintas itu tidak rusak.
+function rpWire(inp, sesudah){
+  if(!inp || inp.dataset.rpwire) return;
+  inp.dataset.rpwire='1';
+  inp.setAttribute('inputmode','numeric');
+  inp.oninput=function(){
+    if(/[^0-9. ]/.test(inp.value)){ if(sesudah) sesudah(papanRp(inp.value)); return; }
+    const pos=inp.selectionStart||0, pjg=inp.value.length;
+    const d=inp.value.replace(/[^0-9]/g,'');
+    inp.value=d?Number(d).toLocaleString('id-ID'):'';
+    const t=Math.max(0, pos + (inp.value.length-pjg));
+    try{ inp.setSelectionRange(t,t); }catch(_){}
+    if(sesudah) sesudah(papanRp(inp.value));
+  };
+  inp.onblur=function(){
+    const v=papanRp(inp.value);
+    inp.value=v?fmtNum(v):'';
+    if(sesudah) sesudah(v);
+  };
+}
+// Bentuk pendek untuk dibaca sekilas: 1,5 jt · 750 rb · 2,4 M
+function rpPendek(n){
+  const v=Math.round(Number(n)||0);
+  if(!v) return '0';
+  if(v>=1e9) return (v/1e9).toFixed(v%1e9?1:0).replace('.',',')+' M';
+  if(v>=1e6) return (v/1e6).toFixed(v%1e6?1:0).replace('.',',')+' jt';
+  if(v>=1e3) return (v/1e3).toFixed(v%1e3?1:0).replace('.',',')+' rb';
+  return String(v);
+}
+// "Rp 1.500.000 · 1,5 jt" — angka penuh tetap ada, bentuk pendek jadi pegangan.
+function rpLengkap(n){
+  const v=Number(n)||0;
+  if(!v) return '';
+  const p=rpPendek(v);
+  return fmtRp(v)+(p===fmtNum(v)?'':(' \u00b7 '+p));
+}
+
+// ── Catatan & lampiran per kartu ─────────────────────────────
+function papanNoteOf(card){
+  const x=((brandAgenda&&brandAgenda.catatanKartu)||[]).find(o=>String(o.card)===String(card));
+  return x||null;
+}
+function papanLampOf(card){
+  return ((brandAgenda&&brandAgenda.lampiran)||[]).filter(o=>String(o.card)===String(card));
+}
 function papanSigOf(det){
   const ag=((brandAgenda&&brandAgenda.agencyKartu)||[])
     .map(x=>[x.card,x.agency,x.foto,x.video,x.design].join('|')).sort().join(';')
@@ -1789,7 +1974,9 @@ function papanBuild(det){
     if(!map[key]) map[key]={card:key, bulan:String(x.bulan||''), bulan0:String(x.bulan||''), pic:String(x.pic||''), rows:[]};
     if(!map[key].bulan && x.bulan){ map[key].bulan=String(x.bulan); map[key].bulan0=String(x.bulan); }
     if(!map[key].pic && x.pic) map[key].pic=String(x.pic);
-    const raw=String(x.subtask||''), sub=papanBrief(raw);
+    const raw=String(x.subtask||'');
+    // Judul yang pernah diubah dari hub menang atas nama mentah Trello.
+    const sub=String(x.namaTampil||'').trim()||papanBrief(raw);
     const dl=String(x.deadlineISO||''), nom=Number(x.nominal)||0, st=agStatusLabel(x.status);
     const cat=String(x.catatan||'');
     const ur=(x.urutan===null||x.urutan===undefined)?null:Number(x.urutan);
@@ -1819,13 +2006,17 @@ function papanBuild(det){
     c.ags0=JSON.parse(JSON.stringify(c.ags));
     const ak=papanAktOf(c.card)||{};
     c.akt=Number(ak.act)||0; c.akt0=c.akt;
+    const nt=papanNoteOf(c.card);
+    c.note=nt?String(nt.catatan||''):''; c.note0=c.note;
+    c.noteOleh=nt?nt.oleh:''; c.noteKapan=nt?nt.kapan:'';
     return c;
   });
 }
 const papanRowDirty=r=>!!(r.baru||r.sub!==r.sub0||r.dl!==r.dl0||Number(r.nom)!==Number(r.nom0)||r.st!==r.st0||String(r.cat||'')!==String(r.cat0||'')||r.ur!==r.ur0);
 const papanAgDirty=c=>JSON.stringify(c.ags||{})!==JSON.stringify(c.ags0||{});
 const papanAktDirty=c=>Number(c.akt||0)!==Number(c.akt0||0);
-const papanCardDirty=c=>!!(c.bulan!==c.bulan0||papanAgDirty(c)||papanAktDirty(c)||c.rows.some(papanRowDirty));
+const papanNoteDirty=c=>String(c.note||'')!==String(c.note0||'');
+const papanCardDirty=c=>!!(c.bulan!==c.bulan0||papanAgDirty(c)||papanAktDirty(c)||papanNoteDirty(c)||c.rows.some(papanRowDirty));
 const papanDirtyN=()=>(papanData||[]).reduce((n,c)=>n+(papanCardDirty(c)?1:0),0);
 // Bulan di estDetail ikut deadline KARTU-nya, sedangkan kolom papan ikut tanggal
 // subtask paling awal — dua hal yang sering tidak sama. Kalau dicocokkan mentah
@@ -1883,7 +2074,9 @@ function papanTile(c,i){
   const telat=c.rows.filter(r=>{const s=papanSisa(r.dl);return r.st!=='Done'&&s!==null&&s<0;}).length;
   const est=papanEst(c.card,c.bulan), pro=c.rows.reduce((s,r)=>s+(Number(r.nom)||0),0);
   return '<button class="ptile"'+(SENTUH?'':' draggable="true"')+' data-pt="'+i+'">'
-    +'<span class="t">'+esc(c.card)+'</span>'
+    +'<span class="t">'+papanKatChip(c.card, true)+esc(papanJudul(c.card))+'</span>'
+    +(String(c.note||'').trim()?'<span class="pnotemark" title="Ada catatan agenda">\u{1F5D2} catatan</span>':'')
+    +(papanLampOf(c.card).length?('<span class="pnotemark">\u{1F5BC} '+papanLampOf(c.card).length+'</span>'):'')
     +(c.pic?'<span class="p">'+esc(c.pic)+'</span>':'')
     +'<span class="bs">'
     +'<span class="pb '+(tot&&done===tot?'g':'')+'">'+done+'/'+tot+' selesai</span>'
@@ -1959,7 +2152,7 @@ function papanRowHtml(r,idx){
     +'<div class="g1">'
     +'<button class="grip" type="button" data-grip="'+idx+'" aria-label="Seret untuk mengurutkan" title="Seret untuk mengurutkan">⠿</button>'
     +'<input class="ps" value="'+esc(r.sub)+'" placeholder="Nama subtask"'
-    +(r.baru?'':' readonly title="Nama subtask ikut Trello — yang bisa diubah di sini tanggal, nominal, dan status."')+'>'
+    +(r.baru?'':' title="Judul yang kamu ketik dipakai di hub. Nama aslinya di Trello tetap seperti di bawah."')+'>'
     +'<input class="pd" type="date" value="'+esc(r.dl)+'">'
     +'<input class="pn rp" value="'+(Number(r.nom)>0?fmtNum(r.nom):'')+'" placeholder="0">'
     +'<select class="pst">'+PAPAN_ST.map(o=>'<option'+(o===r.st?' selected':'')+'>'+o+'</option>').join('')+'</select>'
@@ -1969,15 +2162,105 @@ function papanRowHtml(r,idx){
     +'<input class="pc" value="'+esc(r.cat||'')+'" placeholder="Catatan — kendala, mundur berapa lama, alasannya…"></div>'
     +'<div class="gen">'+(r.baru
        ? ('akan ditulis: <code>'+esc(papanNama(r.sub,r.dl,r.nom))+'</code>')
-       : ('dari Trello: <code>'+esc(r.raw||r.sub)+'</code>'))
+       : ('dari Trello: <code>'+esc(r.raw||r.sub)+'</code>'+(r.sub!==papanBrief(r.raw||'')?' · judul diubah':'')))
     +(s===null?' · tanpa tanggal':(' · '+(s<0?((-s)+' hari lewat'):(s+' hari lagi'))))+'</div>'
     +'</div>';
+}
+// ── Catatan agenda (level kartu) ─────────────────────────────
+function papanNoteHtml(c){
+  return '<div class="psec"><div class="l">Catatan agenda</div>'
+    +'<textarea id="pNote" class="pnote" rows="4" placeholder="Gambaran besar agenda ini \u2014 tujuannya apa, lingkupnya sampai mana, siapa yang terlibat, apa yang harus jadi\u2026">'
+    +esc(c.note||'')+'</textarea>'
+    +'<div class="muted" style="font-size:11px;margin-top:5px">'
+    +(c.noteKapan?('Terakhir diubah '+esc(c.noteKapan)+(c.noteOleh?(' oleh '+esc(c.noteOleh)):'')+'. '):'')
+    +'Tersimpan waktu kamu tekan <b>Simpan Semua</b>. Beda dengan catatan per subtask yang isinya kendala harian.</div></div>';
+}
+
+// ── Lampiran gambar ──────────────────────────────────────────
+function papanLampItem(o){
+  return '<figure class="lamp"><a href="'+esc(o.url)+'" target="_blank" rel="noopener">'
+    +'<img src="'+esc(o.url)+'" alt="'+esc(o.nama)+'" loading="lazy"></a>'
+    +'<figcaption><b>'+esc(o.nama)+'</b><span>'+(Number(o.kb)||0)+' KB'+(o.kapan?(' \u00b7 '+esc(o.kapan)):'')+'</span></figcaption>'
+    +'<button class="lampx" type="button" data-lampdel="'+esc(o.id)+'" title="Hapus lampiran">&times;</button></figure>';
+}
+function papanLampHtml(c){
+  const ls=papanLampOf(c.card);
+  return '<div class="psec"><div class="l">Lampiran \u00b7 '+ls.length+'<span class="sp"></span>'
+    +'<label class="pchip" for="pFile">+ Tambah gambar</label>'
+    +'<input type="file" id="pFile" accept="image/*" multiple style="position:absolute;width:1px;height:1px;padding:0;border:0;opacity:0"></div>'
+    +'<div class="lampgrid" id="pLamp">'+(ls.length?ls.map(papanLampItem).join('')
+      :'<div class="muted" style="font-size:11.5px">Belum ada gambar. Bisa foto produk, mockup desain, atau tangkapan layar hasilnya.</div>')+'</div>'
+    +'<div class="muted" id="pLampInfo" style="font-size:11px;margin-top:8px">Gambar dikecilkan otomatis (maks sisi 1600px) sebelum dikirim. '
+    +'Tersimpan di Google Drive dan <b>bisa dibuka siapa pun yang punya linknya</b> \u2014 jangan lampirkan yang rahasia.</div></div>';
+}
+// Dikecilkan di browser dulu: Apps Script punya batas ukuran POST, dan foto
+// kamera mentah 4-5 MB bikin unggahan gagal/lama tanpa menambah apa pun.
+function papanKecilkan(file, maksSisi){
+  return new Promise(function(ok, gagal){
+    const fr=new FileReader();
+    fr.onerror=()=>gagal(new Error('berkas tidak terbaca'));
+    fr.onload=function(){
+      const img=new Image();
+      img.onerror=()=>gagal(new Error('bukan gambar yang bisa dibuka'));
+      img.onload=function(){
+        const m=maksSisi||1600;
+        let w=img.naturalWidth||img.width, h=img.naturalHeight||img.height;
+        if(!w||!h) return gagal(new Error('ukuran gambar tidak terbaca'));
+        if(w>m||h>m){ const s=m/Math.max(w,h); w=Math.round(w*s); h=Math.round(h*s); }
+        const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+        const ctx=cv.getContext('2d');
+        // PNG transparan jadi hitam kalau langsung dijadikan JPEG.
+        ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,w,h);
+        ctx.drawImage(img,0,0,w,h);
+        ok({ data: cv.toDataURL('image/jpeg', 0.82), mime:'image/jpeg' });
+      };
+      img.src=fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+async function papanLampUpload(c, files){
+  const info=$('pLampInfo'), n=files.length;
+  const asli=info?info.innerHTML:'';
+  let ok=0; const gagal=[];
+  for(let i=0;i<n;i++){
+    const f=files[i];
+    if(info) info.textContent='Mengunggah '+(i+1)+' dari '+n+' \u2014 '+f.name+'\u2026';
+    try{
+      if(String(f.type||'').indexOf('image/')!==0){ gagal.push(f.name+': bukan gambar'); continue; }
+      const kecil=await papanKecilkan(f, 1600);
+      const res=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({
+        type:'uploadLampiran', brand:auth.brand, password:auth.password, card:c.card,
+        nama:f.name, mime:kecil.mime, data:kecil.data })});
+      const j=await res.json();
+      if(!j.success){ gagal.push(f.name+': '+(j.error||'gagal')); continue; }
+      brandAgenda.lampiran=(brandAgenda.lampiran||[]).concat([{ brand:auth.brand, card:c.card,
+        nama:j.nama, url:j.url, id:j.id, kb:j.kb, oleh:auth.brand, kapan:'baru saja' }]);
+      ok++;
+    }catch(e){ gagal.push(f.name+': '+(e.message||'gagal')); }
+  }
+  if(info) info.innerHTML=asli;
+  if(papanOpen!==null) papanOpenCard(papanOpen);
+  if(ok) toast('\u2705 '+ok+' gambar terlampir.');
+  if(gagal.length) toast('Gagal: '+gagal.join(' \u00b7 '), true);
+}
+async function papanLampHapus(c, id, btn){
+  if(btn){ btn.disabled=true; }
+  try{
+    const res=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({
+      type:'hapusLampiran', brand:auth.brand, password:auth.password, id:id })});
+    const j=await res.json();
+    if(!j.success){ toast('Gagal: '+(j.error||''), true); if(btn) btn.disabled=false; return; }
+    brandAgenda.lampiran=((brandAgenda&&brandAgenda.lampiran)||[]).filter(o=>String(o.id)!==String(id));
+    if(papanOpen!==null) papanOpenCard(papanOpen);
+    toast('Lampiran dihapus.');
+  }catch(e){ toast('Gagal terhubung ke server.', true); if(btn) btn.disabled=false; }
 }
 function papanDrawHtml(c){
   const est=papanEst(c.card,c.bulan), pro=c.rows.reduce((s,r)=>s+(Number(r.nom)||0),0);
   return '<div class="pscrim" data-pclose></div><aside class="pdraw" role="dialog" aria-modal="true">'
     +'<div class="h"><div style="flex:1;min-width:0"><div class="eb">'+esc(auth.brand)+' · list '+esc(c.bulan||'tanpa bulan')+'</div>'
-    +'<h3>'+esc(c.card)+'</h3></div><button class="x" data-pclose>&times;</button></div>'
+    +'<h3>'+papanKatChip(c.card)+esc(papanJudul(c.card))+'</h3></div><button class="x" data-pclose>&times;</button></div>'
     +'<div class="b">'
     +'<div class="psec"><div class="l">Bulan (list Trello)</div>'
     +'<select id="pMon" style="padding:6px 9px;border:1px solid var(--cream2);border-radius:8px;background:var(--white);color:var(--text);font-size:12.5px">'
@@ -1989,12 +2272,16 @@ function papanDrawHtml(c){
     +'style="width:190px;text-align:right;padding:6px 9px;border:1px solid var(--cream2);border-radius:8px;background:var(--white);color:var(--text);font-size:12.5px">'
     +'<button class="btn" id="pBudGo">Ajukan ke BOD</button>'
     +'<button class="pchip" id="pBagi">Bagi rata ke '+c.rows.length+' subtask</button></div>'
+    +'<div class="rpbaca" id="pBudBaca">'+(est?rpLengkap(est):'')+'</div>'
     +'<div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:7px">'
     +'<span class="muted" style="font-size:11.5px">Aktual terpakai</span>'
     +'<input id="pAkt" value="'+(Number(c.akt)>0?fmtNum(c.akt):'')+'" placeholder="0" '
-    +'style="width:150px;text-align:right;padding:6px 9px;border:1px solid var(--cream2);border-radius:8px;background:var(--white);color:var(--text);font-size:12.5px"></div>'
+    +'style="width:150px;text-align:right;padding:6px 9px;border:1px solid var(--cream2);border-radius:8px;background:var(--white);color:var(--text);font-size:12.5px">'
+    +'<span class="rpbaca" id="pAktBaca">'+(Number(c.akt)>0?rpLengkap(c.akt):'')+'</span></div>'
     +'<div class="muted" id="pMeter" style="font-size:11px;margin-top:6px">'+papanMeterHtml(c,est,pro)+'</div>'
     +'<div id="pTunggu">'+papanTungguHtml(c)+'</div></div>'
+    +papanNoteHtml(c)
+    +papanLampHtml(c)
     +papanAgHtml(c)
     +'<div class="psec"><div class="l">Checklist · '+c.rows.length+' baris<span class="sp"></span>'
     +'<button class="pchip" id="pPaste">Tempel dari Trello</button>'
@@ -2161,11 +2448,10 @@ function papanWireRows(c){
     const gen=el.querySelector('.gen code');
     const upd=()=>{ gen.textContent=papanNama(r.sub,r.dl,r.nom); papanRefreshDock(); };
     const nm=el.querySelector('.ps');
-    if(r.baru) nm.oninput=e=>{ r.sub=e.target.value; upd(); };
+    nm.oninput=e=>{ r.sub=e.target.value; upd(); };
     el.querySelector('.pd').onchange=e=>{ r.dl=e.target.value; papanRefreshRows(c); };
     el.querySelector('.pst').onchange=e=>{ r.st=e.target.value; papanRefreshDock(); };
-    el.querySelector('.pn').onblur=e=>{ const v=papanRp(e.target.value); r.nom=v;
-      e.target.value=v?fmtNum(v):''; upd(); papanRefreshMeter(c); };
+    rpWire(el.querySelector('.pn'), v=>{ r.nom=v; upd(); papanRefreshMeter(c); });
     el.querySelector('.pc').oninput=e=>{ r.cat=e.target.value;
       el.classList.toggle('adacat', !!e.target.value.trim()); papanRefreshDock(); };
   });
@@ -2192,9 +2478,15 @@ function papanWireDraw(c){
   h.onclick=e=>{ if(e.target.closest('[data-pclose]')) papanCloseDraw(); };
   $('pMon').onchange=e=>{ papanGeserBulan(c,e.target.value); papanOpenCard(papanOpen);
     toast('Dipindah ke '+e.target.value+' — tanggal ikut digeser.'); };
-  $('pBud').onblur=e=>{ const v=papanRp(e.target.value); e.target.value=v?fmtNum(v):''; papanRefreshMeter(c); };
-  $('pAkt').onblur=e=>{ const v=papanRp(e.target.value); c.akt=v;
-    e.target.value=v?fmtNum(v):''; papanRefreshMeter(c); papanRefreshDock(); };
+  rpWire($('pBud'), v=>{ const b=$('pBudBaca'); if(b) b.textContent=rpLengkap(v); papanRefreshMeter(c); });
+  rpWire($('pAkt'), v=>{ c.akt=v; const b=$('pAktBaca'); if(b) b.textContent=rpLengkap(v);
+    papanRefreshMeter(c); papanRefreshDock(); });
+  const nt=$('pNote');
+  if(nt) nt.oninput=e=>{ c.note=e.target.value; papanRefreshDock(); };
+  const fl=$('pFile');
+  if(fl) fl.onchange=e=>{ const f=Array.prototype.slice.call(e.target.files||[]);
+    e.target.value=''; if(f.length) papanLampUpload(c, f); };
+  h.querySelectorAll('[data-lampdel]').forEach(b=>b.onclick=()=>papanLampHapus(c, b.dataset.lampdel, b));
   papanAgSync(c);
   h.querySelectorAll('[data-ag]').forEach(function(inp){
     inp.oninput=function(e){
@@ -2278,13 +2570,19 @@ function papanWireBoard(){
   };
 }
 async function papanSimpan(){
-  const items=[], agItems=[], aktItems=[];
+  const items=[], agItems=[], aktItems=[], noteItems=[];
   (papanData||[]).forEach(c=>{
+    if(papanNoteDirty(c)) noteItems.push({ card:c.card, catatan:String(c.note||'') });
     c.rows.forEach(r=>{
       if(!papanRowDirty(r)) return;
       if(!String(r.sub||'').trim()) return;
+      // Kolom Subtask di sheet adalah kunci ke item Trello, jadi yang dikirim
+      // tetap nama mentahnya. Judul hasil ketikan masuk kolom terpisah, dan
+      // dikosongkan lagi kalau sudah sama dengan nama aslinya.
+      const asli=papanBrief(r.raw||'');
       items.push({ card:c.card, subtask:(r.key||r.sub), deadline:r.dl, nominal:Number(r.nom)||0, status:r.st,
-        catatan:String(r.cat||''), urutan:(r.ur===null||r.ur===undefined)?undefined:Number(r.ur) });
+        catatan:String(r.cat||''), namaTampil:(r.sub===asli?'':String(r.sub||'')),
+        urutan:(r.ur===null||r.ur===undefined)?undefined:Number(r.ur) });
     });
     if(papanAgDirty(c)){
       const nama={}; PAPAN_AG.forEach(n=>nama[n]=1);
@@ -2300,7 +2598,7 @@ async function papanSimpan(){
     }
     if(papanAktDirty(c)) aktItems.push({ card:c.card, bulan:c.bulan, tahun:c.tahun, aktual:Number(c.akt)||0 });
   });
-  if(!items.length && !agItems.length && !aktItems.length){ toast('Tidak ada perubahan.'); return; }
+  if(!items.length && !agItems.length && !aktItems.length && !noteItems.length){ toast('Tidak ada perubahan.'); return; }
   const b=$('pSave'); b.disabled=true; b.textContent='Menyimpan…';
   const kembali=()=>{ b.disabled=false; b.textContent='💾 Simpan Semua'; };
   const kirim=(body)=>fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify(body)}).then(r=>r.json());
@@ -2322,6 +2620,11 @@ async function papanSimpan(){
       if(!j.success){ toast('Aktual gagal: '+(j.error||''), true); kembali(); return; }
       kabar.push((j.count||aktItems.length)+' aktual');
     }
+    if(noteItems.length){
+      const j=await kirim({ type:'editCatatanKartu', brand:auth.brand, password:auth.password, items:noteItems });
+      if(!j.success){ toast('Catatan agenda gagal: '+(j.error||''), true); kembali(); return; }
+      kabar.push((j.count||noteItems.length)+' catatan agenda');
+    }
     toast('✅ '+kabar.join(' + ')+' tersimpan — langsung berlaku.');
     papanData=null; papanSig=null; agendaLoaded=false; loadBrandAgenda();
   }catch(e){ toast('Gagal terhubung ke server.', true); kembali(); }
@@ -2330,7 +2633,7 @@ async function papanSimpan(){
 // Kartu baru tidak perlu dibuat di Trello: handleEditProyeksiBulk_ menulis
 // baris override untuk nama kartu apa pun, dan appendProyBaru_ menyisipkannya
 // kembali saat papan dibaca. Jadi ini murni UI di atas jalur yang sudah ada.
-let papanBaruRows=null;
+let papanBaruRows=null, papanBaruKat='MKT';
 function papanBaruBuka(){
   papanOpen=null;
   papanBaruRows=[{sub:'',dl:'',nom:0}];
@@ -2344,10 +2647,15 @@ function papanBaruHtml(){
     +'<div class="h"><div style="flex:1;min-width:0"><div class="eb">'+esc(auth.brand)+' \u00b7 tahun '+papanTahun+'</div>'
     +'<h3>Agenda baru</h3></div><button class="x" data-pclose>&times;</button></div>'
     +'<div class="b">'
-    +'<div class="psec"><div class="l">Nama agenda</div>'
-    +'<input id="nbNama" placeholder="mis. [MKT] Campaign Imlek" '
+    +'<div class="psec"><div class="l">Jenis agenda</div>'
+    +'<div class="pchips" id="nbKat">'+PAPAN_KAT.map(k=>'<button type="button" class="pchip'
+      +(k.kode===papanBaruKat?' on':'')+'" data-kat="'+k.kode+'">'+esc(k.label)+'</button>').join('')+'</div>'
+    +'<div class="muted" style="font-size:11px;margin-top:5px">Pilihan ini jadi awalan kurung siku di nama kartu, '
+    +'supaya tetap sepadan dengan penamaan di Trello. Judulnya sendiri biar bersih.</div></div>'
+    +'<div class="psec"><div class="l">Judul agenda</div>'
+    +'<input id="nbNama" placeholder="mis. Campaign Imlek" '
     +'style="width:100%;padding:9px 10px;border:1px solid var(--cream2);border-radius:9px;background:var(--white);color:var(--text);font-size:14px">'
-    +'<div class="muted" style="font-size:11px;margin-top:5px">Pakai awalan yang sama dengan agenda lain brand ini, mis. <b>[MKT]</b> atau <b>[SLS]</b>.</div></div>'
+    +'<div class="muted" style="font-size:11px;margin-top:5px">Tersimpan sebagai <code id="nbPrat">['+esc(papanBaruKat)+'] …</code></div></div>'
     +'<div class="psec"><div class="l">Bulan</div>'
     +'<select id="nbBulan" style="padding:9px 10px;border:1px solid var(--cream2);border-radius:9px;background:var(--white);color:var(--text);font-size:14px">'
     +bulanOpt+'</select>'
@@ -2391,9 +2699,22 @@ function papanBaruGambarRows(){
       papanBaruGambarRows(); };
   });
 }
+function papanBaruPrat(){
+  const el=$('nbPrat'); if(!el) return;
+  const j=($('nbNama')&&$('nbNama').value.trim())||'…';
+  el.textContent='['+papanBaruKat+'] '+j;
+}
 function papanBaruWire(){
   const h=$('pDrawHost');
   h.onclick=e=>{ if(e.target.closest('[data-pclose]')){ papanBaruRows=null; h.innerHTML=''; } };
+  h.querySelectorAll('#nbKat [data-kat]').forEach(function(b){
+    b.onclick=function(){
+      papanBaruKat=b.dataset.kat;
+      h.querySelectorAll('#nbKat [data-kat]').forEach(x=>x.classList.toggle('on', x===b));
+      papanBaruPrat();
+    };
+  });
+  $('nbNama').oninput=papanBaruPrat;
   $('nbBulan').value=PAPAN_MON[new Date().getMonth()];
   $('nbAdd').onclick=()=>{
     const last=papanBaruRows[papanBaruRows.length-1];
@@ -2405,8 +2726,10 @@ function papanBaruWire(){
   papanBaruGambarRows();
 }
 async function papanBaruSimpan(){
-  const nama=$('nbNama').value.trim();
-  if(!nama){ toast('Nama agenda wajib diisi.', true); $('nbNama').focus(); return; }
+  const judul=$('nbNama').value.trim();
+  if(!judul){ toast('Judul agenda wajib diisi.', true); $('nbNama').focus(); return; }
+  // Awalan dipasang di sini, bukan diketik, supaya bentuknya seragam.
+  const nama='['+papanBaruKat+'] '+judul.replace(/^\s*\[[^\]]*\]\s*/, '');
   if((papanData||[]).some(c=>String(c.card).trim().toLowerCase()===nama.toLowerCase())){
     toast('Nama agenda itu sudah ada di papan.', true); $('nbNama').focus(); return;
   }
