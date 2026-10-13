@@ -2410,6 +2410,12 @@ async function papanBaruSimpan(){
   if((papanData||[]).some(c=>String(c.card).trim().toLowerCase()===nama.toLowerCase())){
     toast('Nama agenda itu sudah ada di papan.', true); $('nbNama').focus(); return;
   }
+  // Kartu yang dihapus masih menyimpan baris override-nya. Kalau nama yang sama
+  // dipakai lagi, subtask lamanya ikut bangkit dan tercampur dengan yang baru.
+  if(((brandAgenda&&brandAgenda.kartuDihapus)||[]).some(o=>String(o.card).trim().toLowerCase()===nama.toLowerCase())){
+    toast('Nama itu dipakai agenda yang sudah dihapus. Pulihkan saja dari bawah papan, atau pakai nama lain.', true);
+    $('nbNama').focus(); return;
+  }
   const pakai=papanBaruRows.filter(r=>String(r.sub||'').trim());
   if(!pakai.length){ toast('Isi minimal satu subtask.', true); return; }
   // Subtask tanpa tanggal diberi akhir bulan pilihan, supaya kartunya punya
