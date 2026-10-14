@@ -73,6 +73,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
 .ntab{font-family:inherit;font-size:13.5px;font-weight:700;padding:10px 18px;border:none;background:transparent;color:var(--text3);cursor:pointer;border-radius:10px 10px 0 0;border-bottom:3px solid transparent;margin-bottom:-2px}
 .ntab:hover{color:var(--green)}
 .ntab.on{color:var(--green);border-bottom-color:var(--gold);background:var(--white)}
+.ntab.segar{font-size:17px;padding:8px 14px;color:var(--text2);border-radius:10px;border-bottom:0;align-self:center}
+.ntab.segar:hover{color:var(--green);background:var(--white)}
+.ntab.segar:disabled{opacity:.5;cursor:default}
+.ntab.segar.muter{animation:muter .9s linear infinite}
+@keyframes muter{to{transform:rotate(360deg)}}
+.segarinfo{align-self:center;font-size:10.5px;color:var(--text3);white-space:nowrap}
 .pane{display:none}.pane.show{display:block}
 /* calendar */
 .calbar{display:flex;align-items:center;gap:14px;justify-content:center;margin:14px 0 10px}
@@ -422,6 +428,8 @@ span.rpbaca{display:inline;margin-top:0}
           scrollbar-width:none; -webkit-overflow-scrolling:touch; }
   .ntabs::-webkit-scrollbar{ display:none; }
   .ntab{ flex:0 0 auto; white-space:nowrap; padding:10px 13px; font-size:12.5px; }
+  .ntab.segar{ font-size:19px; padding:9px 14px; min-height:40px; }
+  .segarinfo{ display:none; }
 }
 </style>
 </head>
@@ -473,6 +481,9 @@ span.rpbaca{display:inline;margin-top:0}
       <button class="ntab" data-pane="finance">💰 Finance</button>
       <button class="ntab" data-pane="marketing">📊 Marketing</button>
       <button class="ntab" data-pane="laporan">📄 Laporan</button>
+      <span style="flex:1"></span>
+      <span class="segarinfo" id="segarInfo"></span>
+      <button class="ntab segar" id="btnSegar" type="button" title="Muat ulang data tab ini tanpa keluar dari sesi">⟳</button>
     </div>
 
     <div id="pane-inquiry" class="pane show">
@@ -1624,6 +1635,56 @@ function normMktMonths(o){ if(o&&Array.isArray(o.rows)) o.rows.forEach(r=>{ if(r
 let agendaViewMode='papan', calYear, calMonth, agTlScope='month';
 const AG_MON=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
+// ── Muat ulang tanpa reload halaman ──────────────────────────
+// Hub dipakai lebih dari satu orang, jadi data bisa basi tanpa terasa.
+// Tombol ini memuat ulang isi tab yang sedang terbuka — bukan reload
+// halaman, supaya sesi login tidak hilang.
+const muatTerakhir = {};
+function paneAktif(){
+  const b=document.querySelector('.ntab.on');
+  return b?b.dataset.pane:'inquiry';
+}
+function umurMuat(){
+  const t=muatTerakhir[paneAktif()];
+  if(!t) return '';
+  const d=Math.round((Date.now()-t)/1000);
+  if(d<45)   return 'baru saja';
+  if(d<3600) return Math.round(d/60)+' menit lalu';
+  return Math.round(d/3600)+' jam lalu';
+}
+function tandaiWaktuMuat(){
+  const el=document.getElementById('segarInfo');
+  if(el) el.textContent=umurMuat();
+}
+async function segarkanTab(){
+  const pane=paneAktif();
+  // Papan menyimpan suntingan di memori. Memuat ulang membuangnya tanpa
+  // jejak, jadi harus ditanya dulu — bukan diam-diam.
+  if(pane==='agenda' && typeof papanDirtyN==='function' && papanDirtyN()>0){
+    const n=papanDirtyN();
+    if(!confirm(n+' agenda punya perubahan yang belum disimpan.\nMuat ulang akan membuangnya. Lanjutkan?')) return;
+  }
+  const b=document.getElementById('btnSegar');
+  if(b){ b.disabled=true; b.classList.add('muter'); }
+  try{
+    if(pane==='inquiry')   { await refresh(); }
+    else if(pane==='agenda'){ papanData=null; papanSig=null; papanOpen=null;
+                              agendaLoaded=false; await loadBrandAgenda(); }
+    else if(pane==='marketing'){ mktLoaded=false; await loadBrandMarketing(); }
+    else if(pane==='finance'){
+      // finPw masih dipegang, jadi tidak perlu minta password lagi.
+      if(finLoaded) await reloadBrandFinance(); else openFinancePane();
+    }
+    else if(pane==='laporan'){ brandAgenda=null; agendaLoaded=false; await loadBrandLaporan(); }
+    muatTerakhir[pane]=Date.now();
+    tandaiWaktuMuat();
+    toast('\u2713 Data dimuat ulang.');
+  }catch(e){ toast('Gagal memuat ulang.', true); }
+  if(b){ b.disabled=false; b.classList.remove('muter'); }
+}
+// Umur data disegarkan tiap setengah menit supaya "5 menit lalu" tidak bohong.
+setInterval(tandaiWaktuMuat, 30000);
+
 function switchPane(pane){
   document.querySelectorAll('.ntab').forEach(b=>b.classList.toggle('on', b.dataset.pane===pane));
   document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('show', p.id==='pane-'+pane));
@@ -1631,8 +1692,11 @@ function switchPane(pane){
   if(pane==='marketing' && !mktLoaded)    loadBrandMarketing();
   if(pane==='finance')  openFinancePane();
   if(pane==='laporan')  loadBrandLaporan();
+  if(!muatTerakhir[pane]) muatTerakhir[pane]=Date.now();
+  tandaiWaktuMuat();
 }
-document.querySelectorAll('.ntab').forEach(b=> b.onclick=()=>switchPane(b.dataset.pane));
+document.querySelectorAll('.ntab[data-pane]').forEach(b=> b.onclick=()=>switchPane(b.dataset.pane));
+document.getElementById('btnSegar').onclick=segarkanTab;
 
 /* ---- AGENDA ---- */
 function agStatusLabel(st){
