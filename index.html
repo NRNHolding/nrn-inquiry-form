@@ -1684,7 +1684,7 @@ function kabarHtml(){
     const kapan=o.decidedAt?(' \u00b7 '+esc(o.decidedAt)):'';
     const alasan=(!ok && o.note)?('<small>Alasan: '+esc(o.note)+'</small>'):'';
     return '<div class="baris '+(ok?'ok':'no')+'" data-kabar="'+esc(kabarId(o))+'">'
-      +'<div class="t">'+(ok?'\u2705':'\u2717')+' <b>'+esc(o.card||'')+'</b> \u2014 usulan budget '
+      +'<div class="t">'+(ok?'\u2705':'\u2717')+' <b>'+esc(judulDariId(o.card))+'</b> \u2014 usulan budget '
       +fmtRp(Number(o.budget)||0)+(ok?' <b>disetujui BOD</b>':' <b>ditolak BOD</b>')+kapan+'.'
       +(ok?'<small>Angka ini sekarang dipakai sebagai budget yang disepakati.</small>':'')
       +alasan+'</div>'
@@ -1946,6 +1946,15 @@ function papanPicHtml(c){
     +'<button type="button" class="pchip" id="pPicBaru">+ orang baru</button></div>'
     +'<div class="muted" style="font-size:11px;margin-top:5px">Nama yang pernah dipakai di brand ini otomatis jadi pilihan. '
     +'Yang dipilih tampil sebagai label di papan.</div></div>';
+}
+// Usulan budget berkunci id kartu. Supaya yang terbaca orang tetap judulnya,
+// id diterjemahkan lewat daftar kartu yang sedang dimuat.
+function judulDariId(id){
+  const t=String(id||'');
+  if(!/^K[A-Z0-9]{8}$/.test(t)) return t;        // sudah berupa judul
+  const semua=((brandAgenda&&brandAgenda.kartu)||[]).concat((brandAgenda&&brandAgenda.arsip)||[]);
+  const k=semua.find(x=>String(x.id)===t);
+  return k?k.judul:t;
 }
 function papanChipKode(kode, kecil){
   const k=String(kode||'').trim().toUpperCase();
@@ -2579,7 +2588,7 @@ function papanWireDraw(c){
   });
   $('pBudGo').onclick=async ()=>{
     const nilai=papanRp($('pBud').value);
-    if(!await proposeBudget(c.id, c.bulan, nilai)) return;
+    if(!await proposeBudget(c.id, c.bulan, nilai, c.judul)) return;
     papanUsulBaru[String(c.id)]={card:c.id, budget:nilai, status:'pending', proposedAt:''};
     papanTungguRefresh(c); papanRedraw();
   };
@@ -3065,14 +3074,14 @@ function renderBrandFinance(){
   }).join('')||'<tr><td colspan="4" class="muted-empty" style="text-align:center;padding:16px">Belum ada data.</td></tr>';
 
   const dRows=detail.slice().sort((a,b)=>AG_MON.indexOf(a.month)-AG_MON.indexOf(b.month)).map(d=>
-    `<tr><td>${esc(d.month)}</td><td>${esc(d.card)}</td><td class="muted">${esc(d.subtask)}</td><td>${esc(d.deadline)||'—'}</td><td class="num">${fmtRp(d.nominal)}</td></tr>`
+    `<tr><td>${esc(d.month)}</td><td>${esc(d.judul||d.card)}</td><td class="muted">${esc(d.subtask)}</td><td>${esc(d.deadline)||'—'}</td><td class="num">${fmtRp(d.nominal)}</td></tr>`
   ).join('')||'<tr><td colspan="5" class="muted-empty" style="text-align:center;padding:16px">Belum ada rincian.</td></tr>';
 
   // Panel rincian Budget (per card)
   const estDet=(brandFin.estDetail||[]).slice().sort((a,b)=>(b.est||0)-(a.est||0));
   const estDetTotal=estDet.reduce((s,d)=>s+(d.est||0),0);
   const eRows=estDet.map(d=>
-    `<tr><td>${esc(d.card)||'—'}</td><td><b>${esc(d.month)||'—'}</b></td><td class="muted">${esc(d.list)||'—'}</td><td class="num">${fmtRp(d.est)}</td></tr>`
+    `<tr><td>${esc(d.judul||d.card)||'—'}</td><td><b>${esc(d.month)||'—'}</b></td><td class="muted">${esc(d.list)||'—'}</td><td class="num">${fmtRp(d.est)}</td></tr>`
   ).join('')||'<tr><td colspan="4" class="muted-empty" style="text-align:center;padding:16px">Belum ada card dengan Budget.</td></tr>';
   const estPanel=finOpenBN!=='est'?'':`
     <div class="section-title">🔎 Rincian Budget — dari card mana saja</div>
@@ -3081,9 +3090,9 @@ function renderBrandFinance(){
 
   // Panel rincian Proyeksi (per card)
   const pMap={}; detail.forEach(d=>{ const k=d.card+'|'+d.month;
-    if(!pMap[k]) pMap[k]={card:d.card,month:d.month,n:0,total:0}; pMap[k].n++; pMap[k].total+=(d.nominal||0); });
+    if(!pMap[k]) pMap[k]={card:d.card,judul:d.judul||d.card,month:d.month,n:0,total:0}; pMap[k].n++; pMap[k].total+=(d.nominal||0); });
   const pArr=Object.keys(pMap).map(k=>pMap[k]).sort((a,b)=>b.total-a.total);
-  const pRows=pArr.map(p=>`<tr><td>${esc(p.card)||'—'}</td><td><b>${esc(p.month)||'—'}</b></td><td class="num">${p.n}</td><td class="num">${fmtRp(p.total)}</td></tr>`
+  const pRows=pArr.map(p=>`<tr><td>${esc(p.judul||p.card)||'—'}</td><td><b>${esc(p.month)||'—'}</b></td><td class="num">${p.n}</td><td class="num">${fmtRp(p.total)}</td></tr>`
   ).join('')||'<tr><td colspan="4" class="muted-empty" style="text-align:center;padding:16px">Belum ada nominal di checklist.</td></tr>';
   const projPanel=finOpenBN!=='proj'?'':`
     <div class="section-title">🔎 Rincian Proyeksi — dari card mana saja</div>
@@ -3092,8 +3101,8 @@ function renderBrandFinance(){
 
   // ── Pecahan Budget per card ──
   const pecahMap={}; const kunci=(c)=>c;
-  estDet.forEach(d=>{ const k=kunci(d.card); if(!pecahMap[k]) pecahMap[k]={card:d.card,month:d.month,est:0,proj:0,n:0}; pecahMap[k].est+=d.est||0; });
-  detail.forEach(d=>{ const k=kunci(d.card); if(!pecahMap[k]) pecahMap[k]={card:d.card,month:d.month,est:0,proj:0,n:0}; pecahMap[k].proj+=d.nominal||0; pecahMap[k].n++; });
+  estDet.forEach(d=>{ const k=kunci(d.card); if(!pecahMap[k]) pecahMap[k]={card:d.card,judul:d.judul||d.card,month:d.month,est:0,proj:0,n:0}; pecahMap[k].est+=d.est||0; });
+  detail.forEach(d=>{ const k=kunci(d.card); if(!pecahMap[k]) pecahMap[k]={card:d.card,judul:d.judul||d.card,month:d.month,est:0,proj:0,n:0}; pecahMap[k].proj+=d.nominal||0; pecahMap[k].n++; });
   const statusPecah=p=>{ const sisa=p.est-p.proj, tol=Math.max(1000,p.est*0.005);
     if(!p.est&&p.proj)  return {k:'noest',   urut:1,label:'Budget belum diisi',warna:'var(--amber)'};
     if(!p.est&&!p.proj) return {k:'kosong',  urut:4,label:'Belum ada angka',      warna:'var(--text3)'};
@@ -3112,9 +3121,9 @@ function renderBrandFinance(){
     const stBadge = ov ? (ov.status==='approved'?'<div class="vsub" style="color:var(--green4)">✓ disetujui BOD</div>'
       : ov.status==='rejected'?('<div class="vsub" style="color:var(--red)">✗ ditolak'+(ov.note?': '+esc(ov.note):'')+'</div>')
       : ('<div class="vsub" style="color:var(--amber)">⏳ usulan '+fmtRp(ov.budget)+' menunggu BOD</div>')) : '';
-    return `<tr><td>${esc(p.card)||'—'}</td><td><b>${esc(p.month)||'—'}</b></td>
+    return `<tr><td>${esc(p.judul||p.card)||'—'}</td><td><b>${esc(p.month)||'—'}</b></td>
       <td class="num">${p.est?fmtRp(p.est):'<span class="lap-na">belum diisi</span>'}${stBadge}
-        <div style="display:flex;gap:4px;margin-top:4px;justify-content:flex-end"><input type="number" min="0" placeholder="usul budget" class="bgt-input" data-month="${esc(p.month)}" style="width:104px;font-size:12px;padding:3px 6px;border:1px solid var(--cream2);border-radius:6px"><button class="iconbtn bgt-ajukan" data-card="${esc(p.card)}" style="font-size:11px">Ajukan</button></div></td>
+        <div style="display:flex;gap:4px;margin-top:4px;justify-content:flex-end"><input type="number" min="0" placeholder="usul budget" class="bgt-input" data-month="${esc(p.month)}" style="width:104px;font-size:12px;padding:3px 6px;border:1px solid var(--cream2);border-radius:6px"><button class="iconbtn bgt-ajukan" data-card="${esc(p.card)}" data-judul="${esc(p.judul||p.card)}" style="font-size:11px">Ajukan</button></div></td>
       <td class="num">${p.proj?fmtRp(p.proj):'<span class="lap-na">belum dirinci</span>'}</td>
       <td class="num">${sisaTxt}</td>
       <td style="min-width:100px"><div class="bar" style="margin-top:0"><i class="${cls}" style="width:${Math.min(pct,100)}%"></i></div><div class="vsub muted" style="margin-top:2px">${p.est?pct+'%':'—'} · ${p.n} item</div></td>
@@ -3158,17 +3167,18 @@ function renderBrandFinance(){
   $('estModeBN').onchange=e=>{ estModeBN=e.target.value; renderBrandFinance(); };
   box.querySelectorAll('.bgt-ajukan').forEach(b=>b.onclick=()=>{
     const inp=b.closest('td').querySelector('.bgt-input');
-    proposeBudget(b.dataset.card, inp?inp.dataset.month:'', inp?Number(inp.value):0);
+    proposeBudget(b.dataset.card, inp?inp.dataset.month:'', inp?Number(inp.value):0, b.dataset.judul);
   });
   if(typeof posisiTooltipBN==='function') posisiTooltipBN(box);
 }
 // Brand ajukan/revisi Budget → status 'pending', menunggu approval BOD.
-async function proposeBudget(card, month, budget){
+async function proposeBudget(card, month, budget, judul){
   // brandFin baru terisi kalau tab Keuangan pernah dibuka. Dari Papan biasanya
   // masih null, jadi tahunnya jangan diambil dari sana.
   const tahun=(brandFin&&brandFin.year)||new Date().getFullYear();
   if(!(budget>0)){ toast('Isi nominal budget dulu.', true); return false; }
-  if(!confirm('Ajukan budget '+fmtRp(budget)+' untuk "'+card+'"?\nBerlaku setelah di-approve BOD.')) return false;
+  // Yang disimpan id kartunya; yang ditanyakan ke orang judulnya.
+  if(!confirm('Ajukan budget '+fmtRp(budget)+' untuk "'+(judul||card)+'"?\nBerlaku setelah di-approve BOD.')) return false;
   try{
     const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({
       type:'proposeBudget', brand:auth.brand, password:auth.password,
@@ -3288,7 +3298,8 @@ async function loadBrandLaporan(){
     if(!budget.success){ box.innerHTML='<div class="err show">'+esc(budget.error||'Gagal memuat')+'</div>'; return; }
     lapBudget=budget;
     lapNotesBrand=notes.success?notes.notes:{wins:'',losses:'',opportunity:'',problem:''};
-    if(!brandAgenda){ const d=await fetch(APPS_SCRIPT_URL+'?action=getBrandAgenda'+q).then(r=>r.json()); if(d.success){brandAgenda=d;agendaLoaded=true;} }
+    if(!brandAgenda){ const d=await fetch(APPS_SCRIPT_URL+'?action=getAgendaHub'+q).then(r=>r.json());
+      if(d.success){brandAgenda=hubSiapkan(d);agendaLoaded=true;} }
     if(!brandMkt){ const d=await fetch(APPS_SCRIPT_URL+'?action=getBrandMarketing'+q).then(r=>r.json()); if(d.success){brandMkt=normMktMonths(d);mktLoaded=true;} }
     renderBrandLaporan();
   }catch(e){ box.innerHTML='<div class="err show">Gagal terhubung ke server.</div>'; }
